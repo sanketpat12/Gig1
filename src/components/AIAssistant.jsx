@@ -89,7 +89,8 @@ Be concise, friendly, and practical. Format your answers smoothly (avoid overly 
       }
     } catch (err) {
       console.error("AI Assistant Error:", err);
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Oops! Something went wrong connecting to the AI. Please make sure the NVIDIA API key is valid and you are connected to the internet.' }]);
+      let errorDesc = err.message ? err.message : String(err);
+      setMessages(prev => [...prev, { role: 'assistant', content: `Oops! Something went wrong: ${errorDesc}. Please make sure the NVIDIA API key is valid.` }]);
     } finally {
       setIsLoading(false);
     }

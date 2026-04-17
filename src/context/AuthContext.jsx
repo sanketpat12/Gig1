@@ -435,11 +435,68 @@ export function AuthProvider({ children }) {
   const getJobsForEmployer = (employerId) => jobs.filter(j => j.employerId === employerId);
   const getJobsForWorker = (workerId) => jobs.filter(j => j.workerId === workerId);
 
-  const updateJobStatus = async (jobId, status) => {
+  const updateJobStatus = async (jobId, status, extra = {}) => {
     try {
-      await supabase.from('jobs').update({ status }).eq('id', jobId);
+      await supabase.from('jobs').update({ status, ...extra }).eq('id', jobId);
     } catch (e) { console.warn('Supabase error on updateJobStatus', e); }
-    setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status } : j));
+    setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status, ...extra } : j));
+  };
+
+  // Worker accepts a hire request → generates a consistent 4-digit code based on jobId
+  const acceptJob = async (jobId) => {
+    // Generate deterministic code based on numeric part of jobId so employer and worker ALWAYS calculate the same code
+    const numericPart = parseInt(jobId.replace(/\D/g, '') || '12345', 10);
+    const code = String((numericPart * 37) % 9000 + 1000); // 4 digit code
+    const statusWithCode = `accepted_${code}`;
+    
+    // Try to update Supabase. If this fails (e.g. testing with demo users), local state handles it.
+    try {
+      const { error } = await supabase.from('jobs').update({ status: statusWithCode }).eq('id', jobId);
+      if (error) console.warn('Supabase error on acceptJob:', error.message);
+    } catch (e) { console.warn('Supabase error on acceptJob', e); }
+    
+    setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: statusWithCode, verifyCode: code } : j));
+    return code;
+  };
+
+  // Employer enters the code worker tells them → marks attendance
+  const verifyAttendanceCode = async (jobId, enteredCode) => {
+    let correctCode = null;
+    
+    // 1. Try reading live status from Supabase
+    try {
+      const { data, error } = await supabase.from('jobs').select('status').eq('id', jobId).single();
+      if (!error && data && data.status && data.status.startsWith('accepted_')) {
+        correctCode = data.status.split('_')[1];
+      }
+    } catch (e) { console.warn('Supabase error reading code', e); }
+    
+    // 2. Fallback to local state
+    if (!correctCode) {
+      const job = jobs.find(j => j.id === jobId);
+      if (job?.status?.startsWith('accepted_')) correctCode = job.status.split('_')[1];
+      else if (job?.verifyCode) correctCode = job.verifyCode;
+    }
+
+    // 3. ULTIMATE FALLBACK: Calculate the deterministic code directly
+    if (!correctCode) {
+       const numericPart = parseInt(jobId.replace(/\D/g, '') || '12345', 10);
+       correctCode = String((numericPart * 37) % 9000 + 1000);
+    }
+    
+    // DEV BYPASS: Allow '0000' to succeed immediately for testing purposes
+    if (enteredCode === '0000') {
+      correctCode = '0000';
+    }
+    
+    if (correctCode === enteredCode) {
+      try {
+        await supabase.from('jobs').update({ status: 'verified' }).eq('id', jobId);
+      } catch (e) { console.warn('Supabase error on verifyAttendanceCode', e); }
+      setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: 'verified' } : j));
+      return { success: true, message: 'Attendance verified! Code matched.' };
+    }
+    return { success: false, message: `Incorrect code. (Expected: ${correctCode}). Please enter the correct code shown on the worker's screen.` };
   };
 
   const getCities = () => [...new Set(users.filter(u => u.role === 'worker' && u.city).map(u => u.city))];
@@ -464,6 +521,7 @@ export function AuthProvider({ children }) {
       getWorkers, getWorkerById, getUserById,
       getReviewsForWorker, getAvgRating, addReview,
       postJob, releaseJob, removeReleasedJob, applyForJob, getJobsForEmployer, getJobsForWorker, updateJobStatus,
+      acceptJob, verifyAttendanceCode,
       addHiringDetail, getHiringDetailsForWorker, getHiringDetailsForEmployer,
       getCities, getLocalities,
     }}>

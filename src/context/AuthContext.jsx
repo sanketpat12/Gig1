@@ -393,7 +393,18 @@ export function AuthProvider({ children }) {
 
   const applyForJob = async (jobData) => {
     // Links a worker to an employer's open job with status 'applied'
-    const newJob = { ...jobData, id: `job_${Date.now()}`, status: 'applied', createdAt: new Date().toISOString() };
+    // We encode the rjobId in the jobs id so we can reference it when hiring
+    const rjobIdPart = jobData.rjobId ? `_rjob_${jobData.rjobId}` : '';
+    const newJob = { 
+      ...jobData, 
+      id: `job_${Date.now()}${rjobIdPart}`, 
+      status: 'applied', 
+      createdAt: new Date().toISOString() 
+    };
+    
+    // Remove rjobId from payload since it's not a real DB column in jobs table
+    delete newJob.rjobId;
+
     try {
       await supabase.from('jobs').insert(newJob);
     } catch (e) { console.warn('Supabase error on applyForJob', e); }
@@ -410,6 +421,14 @@ export function AuthProvider({ children }) {
 
     setReleasedJobs(prev => [newJob, ...prev]);
     return newJob;
+  };
+
+  const removeReleasedJob = async (rjobId) => {
+    try {
+      await supabase.from('released_jobs').delete().eq('id', rjobId);
+    } catch (e) { console.warn('Supabase error on removeReleasedJob', e); }
+    
+    setReleasedJobs(prev => prev.filter(j => j.id !== rjobId));
   };
 
   const getJobsForEmployer = (employerId) => jobs.filter(j => j.employerId === employerId);
@@ -443,7 +462,7 @@ export function AuthProvider({ children }) {
       login, register, logout, updateUser,
       getWorkers, getWorkerById,
       getReviewsForWorker, getAvgRating, addReview,
-      postJob, releaseJob, applyForJob, getJobsForEmployer, getJobsForWorker, updateJobStatus,
+      postJob, releaseJob, removeReleasedJob, applyForJob, getJobsForEmployer, getJobsForWorker, updateJobStatus,
       addHiringDetail, getHiringDetailsForWorker, getHiringDetailsForEmployer,
       getCities, getLocalities,
     }}>

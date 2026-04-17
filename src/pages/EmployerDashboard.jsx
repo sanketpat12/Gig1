@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import WorkerCard from '../components/WorkerCard';
 import ReviewModal from '../components/ReviewModal';
@@ -11,17 +11,17 @@ const WORK_TYPE_OPTIONS = [
 ];
 
 export default function EmployerDashboard() {
-  const { currentUser, getWorkers, getCities, getLocalities, postJob, releaseJob, getJobsForEmployer, updateJobStatus, getWorkerById } = useAuth();
+  const { currentUser, getWorkers, getCities, getLocalities, postJob, releaseJob, removeReleasedJob, getJobsForEmployer, updateJobStatus, getWorkerById } = useAuth();
 
-  /* Work type selection */
-  const [workType, setWorkType] = useState(null);
+  /* Work type selection - Persist in sessionStorage so 'back' button doesn't reset it */
+  const [workType, setWorkType] = useState(() => sessionStorage.getItem('gig_emp_workType') || null);
 
   /* Search / filter */
-  const [city, setCity]           = useState('');
-  const [locality, setLocality]   = useState('');
-  const [skill, setSkill]         = useState('');
-  const [availability, setAvailability] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
+  const [city, setCity]           = useState(() => sessionStorage.getItem('gig_emp_city') || '');
+  const [locality, setLocality]   = useState(() => sessionStorage.getItem('gig_emp_locality') || '');
+  const [skill, setSkill]         = useState(() => sessionStorage.getItem('gig_emp_skill') || '');
+  const [availability, setAvailability] = useState(() => sessionStorage.getItem('gig_emp_avail') || '');
+  const [showFilters, setShowFilters] = useState(() => sessionStorage.getItem('gig_emp_showFilters') === 'true');
 
   /* Review modal */
   const [reviewWorker, setReviewWorker] = useState(null);
@@ -29,10 +29,21 @@ export default function EmployerDashboard() {
   /* Release job modal */
   const [showReleaseModal, setShowReleaseModal] = useState(false);
   
-  /* Applicant Detail modal */
-  const [selectedApplicant, setSelectedApplicant] = useState(null);
+  /* Applicant Detail modal - Persist its ID so modal re-opens after pressing 'back' */
+  const [selectedAppId, setSelectedAppId] = useState(() => sessionStorage.getItem('gig_emp_applicant_id') || null);
   
   const [toast, setToast] = useState(null);
+
+  // Sync state to sessionStorage whenever it changes
+  useEffect(() => {
+    if (workType) sessionStorage.setItem('gig_emp_workType', workType); else sessionStorage.removeItem('gig_emp_workType');
+    if (city) sessionStorage.setItem('gig_emp_city', city); else sessionStorage.removeItem('gig_emp_city');
+    if (locality) sessionStorage.setItem('gig_emp_locality', locality); else sessionStorage.removeItem('gig_emp_locality');
+    if (skill) sessionStorage.setItem('gig_emp_skill', skill); else sessionStorage.removeItem('gig_emp_skill');
+    if (availability) sessionStorage.setItem('gig_emp_avail', availability); else sessionStorage.removeItem('gig_emp_avail');
+    if (selectedAppId) sessionStorage.setItem('gig_emp_applicant_id', selectedAppId); else sessionStorage.removeItem('gig_emp_applicant_id');
+    sessionStorage.setItem('gig_emp_showFilters', showFilters);
+  }, [workType, city, locality, skill, availability, showFilters, selectedAppId]);
 
   const cities = getCities();
   const localities = city ? getLocalities(city) : [];
@@ -52,6 +63,11 @@ export default function EmployerDashboard() {
   // Pending worker applications to open jobs
   const employerJobs = getJobsForEmployer(currentUser?.id);
   const pendingApplications = employerJobs.filter(j => j.status === 'applied');
+  
+  // Reconstruct selectedApplicant from persisted ID
+  const selectedApplicantApp = pendingApplications.find(a => a.id === selectedAppId);
+  const selectedApplicantWorker = selectedApplicantApp ? getWorkerById(selectedApplicantApp.workerId) : null;
+  const selectedApplicant = selectedApplicantWorker ? { worker: selectedApplicantWorker, jobId: selectedApplicantApp.id } : null;
 
   if (!workType) {
     return (
@@ -125,9 +141,8 @@ export default function EmployerDashboard() {
               <div 
                 key={app.id} 
                 onClick={() => {
-                  const workerFullData = getWorkerById(app.workerId);
-                  if (workerFullData) {
-                    setSelectedApplicant({ worker: workerFullData, jobId: app.id });
+                  if (getWorkerById(app.workerId)) {
+                    setSelectedAppId(app.id);
                   }
                 }}
                 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', cursor: 'pointer', transition: 'border-color 0.2s', ':hover': { borderColor: 'var(--primary)' } }}
@@ -142,6 +157,13 @@ export default function EmployerDashboard() {
                     className="btn btn-sm btn-primary"
                     onClick={() => {
                       updateJobStatus(app.id, 'open'); // Convert to a regular 'open' incoming job for the worker
+                      
+                      // Remove the public posted job if the rjobId was recorded
+                      if (app.id && app.id.includes('_rjob_')) {
+                        const rjobId = app.id.split('_rjob_')[1];
+                        if (rjobId) removeReleasedJob(rjobId);
+                      }
+
                       showToast(`You hired ${app.workerName}! They will see it in their dashboard.`);
                     }}
                   >
@@ -164,12 +186,12 @@ export default function EmployerDashboard() {
 
       {/* Applicant Detail Modal */}
       {selectedApplicant && (
-        <div className="modal-overlay" onClick={() => setSelectedApplicant(null)}>
+        <div className="modal-overlay" onClick={() => setSelectedAppId(null)}>
           <div className="modal-content animate-fadeInUp" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px', padding: 0, background: 'transparent', boxShadow: 'none' }}>
             <div style={{ background: '#fff', borderRadius: '16px', overflow: 'hidden' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
                 <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Applicant Profile</h2>
-                <button className="btn-icon" onClick={() => setSelectedApplicant(null)}><X size={20}/></button>
+                <button className="btn-icon" onClick={() => setSelectedAppId(null)}><X size={20}/></button>
               </div>
               <div style={{ padding: '20px' }}>
                 {/* Re-use the existing beautiful WorkerCard but turn off its own actions */}
@@ -180,8 +202,15 @@ export default function EmployerDashboard() {
                   className="btn btn-primary" style={{ flex: 1 }}
                   onClick={() => {
                     updateJobStatus(selectedApplicant.jobId, 'open');
+                    
+                    // Remove the public posted job if the rjobId was recorded
+                    if (selectedApplicant.jobId && selectedApplicant.jobId.includes('_rjob_')) {
+                      const rjobId = selectedApplicant.jobId.split('_rjob_')[1];
+                      if (rjobId) removeReleasedJob(rjobId);
+                    }
+
                     showToast(`You hired ${selectedApplicant.worker.name}! They will see it in their dashboard.`);
-                    setSelectedApplicant(null);
+                    setSelectedAppId(null);
                   }}
                 >
                   <CheckCircle size={16}/> Hire {selectedApplicant.worker.name.split(' ')[0]}
@@ -190,7 +219,7 @@ export default function EmployerDashboard() {
                   className="btn btn-secondary" style={{ flex: 1 }}
                   onClick={() => {
                     updateJobStatus(selectedApplicant.jobId, 'rejected');
-                    setSelectedApplicant(null);
+                    setSelectedAppId(null);
                   }}
                 >
                   Decline

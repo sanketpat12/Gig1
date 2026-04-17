@@ -180,7 +180,8 @@ function FindJobsTab({ openJobs, appliedJobs, setAppliedJobs, showToast, applyFo
               employerId: selectedJob.employerId,
               workerId: currentUser.id,
               employerName: selectedJob.employerName || selectedJob.employer,
-              workerName: currentUser.name
+              workerName: currentUser.name,
+              rjobId: selectedJob.id
             });
             showToast(`Applied for "${selectedJob.title}"! Employer will be notified.`);
             setSelectedJob(null);

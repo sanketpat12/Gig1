@@ -11,11 +11,7 @@ const WORK_TYPE_OPTIONS = [
 ];
 
 export default function EmployerDashboard() {
-<<<<<<< HEAD
-  const { currentUser, getWorkers, getCities, getLocalities, postJob, releaseJob, removeReleasedJob, getJobsForEmployer, updateJobStatus, getWorkerById, getUserById } = useAuth();
-=======
-  const { currentUser, getWorkers, getCities, getLocalities, postJob, releaseJob, removeReleasedJob, getJobsForEmployer, updateJobStatus, getWorkerById, verifyAttendanceCode } = useAuth();
->>>>>>> origin/main
+  const { currentUser, getWorkers, getCities, getLocalities, postJob, releaseJob, removeReleasedJob, getJobsForEmployer, updateJobStatus, getWorkerById, verifyAttendanceCode, getUserById } = useAuth();
 
   /* Work type selection - Persist in sessionStorage so 'back' button doesn't reset it */
   const [workType, setWorkType] = useState(() => sessionStorage.getItem('gig_emp_workType') || null);
@@ -76,7 +72,6 @@ export default function EmployerDashboard() {
   // Pending worker applications to open jobs
   const employerJobs = getJobsForEmployer(currentUser?.id);
   const pendingApplications = employerJobs.filter(j => j.status === 'applied');
-  const ongoingHires = employerJobs.filter(j => j.status === 'open' || j.status === 'accepted');
   
   // Reconstruct selectedApplicant from persisted ID
   const selectedApplicantApp = pendingApplications.find(a => a.id === selectedAppId);
@@ -149,223 +144,6 @@ export default function EmployerDashboard() {
         </div>
       </div>
 
-<<<<<<< HEAD
-      {/* Notifications / Pending Applications */}
-      {pendingApplications.length > 0 && (
-        <div className="glass-card animate-fadeInUp" style={{ marginBottom: '20px', borderLeft: '4px solid var(--primary)', padding: '16px 20px', background: 'rgba(41,98,255,0.05)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-            <Bell size={18} style={{ color: 'var(--primary)' }}/>
-            <h3 style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--primary)' }}>New Applications ({pendingApplications.length})</h3>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {pendingApplications.map(app => (
-              <div 
-                key={app.id} 
-                onClick={() => {
-                  if (getWorkerById(app.workerId)) {
-                    setSelectedAppId(app.id);
-                  }
-                }}
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', cursor: 'pointer', transition: 'border-color 0.2s', ':hover': { borderColor: 'var(--primary)' } }}
-                className="hover-border-primary"
-              >
-                <div>
-                  <p style={{ fontWeight: 600, fontSize: '0.9rem' }}>{app.workerName} applied for your job</p>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Tap to view profile • Applied recently</p>
-                </div>
-                <div style={{ display: 'flex', gap: '8px' }} onClick={e => e.stopPropagation()}>
-                  <button 
-                    className="btn btn-sm btn-primary"
-                    onClick={() => {
-                      updateJobStatus(app.id, 'open'); // Convert to a regular 'open' incoming job for the worker
-                      
-                      // Remove the public posted job if the rjobId was recorded
-                      if (app.id && app.id.includes('_rjob_')) {
-                        const rjobId = app.id.split('_rjob_')[1];
-                        if (rjobId) removeReleasedJob(rjobId);
-                      }
-
-                      showToast(`You hired ${app.workerName}! They will see it in their dashboard.`);
-                    }}
-                  >
-                    <CheckCircle size={14}/> Hire
-                  </button>
-                  <button 
-                    className="btn btn-sm btn-secondary"
-                    onClick={() => {
-                      updateJobStatus(app.id, 'rejected');
-                    }}
-                  >
-                    Decline
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Applicant Detail Modal */}
-      {selectedApplicant && (
-        <div className="modal-overlay" onClick={() => setSelectedAppId(null)}>
-          <div className="modal-content animate-fadeInUp" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px', padding: 0, background: 'transparent', boxShadow: 'none' }}>
-            <div style={{ background: '#fff', borderRadius: '16px', overflow: 'hidden' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
-                <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Applicant Profile</h2>
-                <button className="btn-icon" onClick={() => setSelectedAppId(null)}><X size={20}/></button>
-              </div>
-              <div style={{ padding: '20px' }}>
-                {/* Re-use the existing beautiful WorkerCard but turn off its own actions */}
-                <WorkerCard worker={selectedApplicant.worker} showActions={false} />
-              </div>
-              <div style={{ display: 'flex', gap: '12px', padding: '16px 20px', background: 'var(--bg-secondary)', borderTop: '1px solid var(--border)' }}>
-                <button 
-                  className="btn btn-primary" style={{ flex: 1 }}
-                  onClick={() => {
-                    updateJobStatus(selectedApplicant.jobId, 'open');
-                    
-                    // Remove the public posted job if the rjobId was recorded
-                    if (selectedApplicant.jobId && selectedApplicant.jobId.includes('_rjob_')) {
-                      const rjobId = selectedApplicant.jobId.split('_rjob_')[1];
-                      if (rjobId) removeReleasedJob(rjobId);
-                    }
-
-                    showToast(`You hired ${selectedApplicant.worker.name}! They will see it in their dashboard.`);
-                    setSelectedAppId(null);
-                  }}
-                >
-                  <CheckCircle size={16}/> Hire {selectedApplicant.worker.name.split(' ')[0]}
-                </button>
-                <button 
-                  className="btn btn-secondary" style={{ flex: 1 }}
-                  onClick={() => {
-                    updateJobStatus(selectedApplicant.jobId, 'rejected');
-                    setSelectedAppId(null);
-                  }}
-                >
-                  Decline
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Ongoing Hires Section */}
-      {ongoingHires.length > 0 && (
-        <div className="glass-card animate-fadeInUp" style={{ marginBottom: '20px', borderLeft: '4px solid #7c3aed', padding: '16px 20px', background: 'rgba(124,58,237,0.04)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-            <CheckCircle size={18} style={{ color: '#7c3aed' }}/>
-            <h3 style={{ fontWeight: 700, fontSize: '1rem', color: '#7c3aed' }}>Ongoing Hires ({ongoingHires.length})</h3>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {ongoingHires.map(job => {
-              const worker = getUserById(job.workerId);
-              const isAccepted = job.status === 'accepted';
-              return (
-                <div key={job.id} style={{ background: '#fff', borderRadius: '12px', padding: '14px 16px', border: `1px solid ${isAccepted ? '#22c55e44' : '#7c3aed33'}` }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div className="avatar avatar-sm" style={{ background: isAccepted ? 'linear-gradient(135deg,#43e97b,#12b886)' : 'linear-gradient(135deg,#7c3aed,#a855f7)', fontSize: '0.85rem' }}>
-                        {job.workerName?.[0]?.toUpperCase()}
-                      </div>
-                      <div>
-                        <p style={{ fontWeight: 700, fontSize: '0.9rem' }}>{job.workerName}</p>
-                        <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                          Hired on {new Date(job.createdAt).toLocaleDateString('en-IN', { day:'numeric', month:'short' })}
-                        </p>
-                      </div>
-                    </div>
-                    <span className="badge" style={isAccepted
-                      ? { background:'#22c55e22', color:'#16a34a', border:'1px solid #22c55e44' }
-                      : { background:'#7c3aed22', color:'#7c3aed', border:'1px solid #7c3aed44' }
-                    }>
-                      {isAccepted ? '✅ Accepted' : '⏳ Waiting for Acceptance'}
-                    </span>
-                  </div>
-
-                  {/* Show contact info only once worker accepted */}
-                  {isAccepted && (
-                    <div style={{ marginTop: '12px', background: 'rgba(34,197,94,0.06)', borderRadius: '10px', padding: '12px' }}>
-                      <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#16a34a', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📞 Worker Contact</p>
-                      {worker?.phone && (
-                        <p style={{ fontSize: '0.88rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
-                          📱 <strong>{worker.phone}</strong>
-                        </p>
-                      )}
-                      {worker?.email && (
-                        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                          ✉️ {worker.email}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {showFilters && (
-        <div className="filter-panel glass-card animate-fadeInUp">
-          <div className="filter-row">
-            <div className="form-group" style={{ minWidth:'180px' }}>
-              <label className="form-label"><MapPin size={12} style={{ display:'inline', marginRight:'4px' }}/>City</label>
-              <select id="filter-city" className="form-select" value={city} onChange={e => { setCity(e.target.value); setLocality(''); }}>
-                <option value="">All Cities</option>
-                {cities.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            {city && localities.length > 0 && (
-              <div className="form-group" style={{ minWidth:'200px' }}>
-                <label className="form-label">Locality</label>
-                <select id="filter-locality" className="form-select" value={locality} onChange={e => setLocality(e.target.value)}>
-                  <option value="">All Localities</option>
-                  {localities.map(l => <option key={l} value={l}>{l}</option>)}
-                </select>
-              </div>
-            )}
-            {city && localities.length === 0 && (
-              <div className="form-group" style={{ minWidth:'200px' }}>
-                <label className="form-label">Locality</label>
-                <input id="filter-locality-input" type="text" className="form-input" placeholder="e.g. Kothrud"
-                  value={locality} onChange={e => setLocality(e.target.value)} />
-              </div>
-            )}
-            <div className="form-group" style={{ minWidth:'160px' }}>
-              <label className="form-label">Skill</label>
-              <input id="filter-skill" type="text" className="form-input" placeholder="e.g. Plumbing"
-                value={skill} onChange={e => setSkill(e.target.value)} />
-            </div>
-            <div className="form-group" style={{ minWidth:'150px' }}>
-              <label className="form-label">Availability</label>
-              <select id="filter-availability" className="form-select" value={availability} onChange={e => setAvailability(e.target.value)}>
-                <option value="">Any</option>
-                <option value="available">Available Now</option>
-                <option value="busy">Busy</option>
-              </select>
-            </div>
-            {(city || skill || availability) && (
-              <button className="btn btn-secondary btn-sm" style={{ alignSelf:'flex-end', marginBottom:'0' }} onClick={clearFilters}>
-                <X size={13}/> Clear
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Workers Grid */}
-      {workers.length === 0 ? (
-        <div className="empty-state glass-card">
-          <Search size={48} style={{ color:'var(--text-secondary)', margin:'0 auto' }}/>
-          <h3 style={{ marginTop:'16px', color:'var(--text-secondary)' }}>No workers found</h3>
-          <p style={{ fontSize:'0.85rem', color:'var(--text-secondary)', marginTop:'8px' }}>
-            Try changing the city or skill filter, or check back later.
-          </p>
-          {(city || skill || availability) && (
-            <button className="btn btn-secondary btn-sm" style={{ marginTop:'16px' }} onClick={clearFilters}>Clear Filters</button>
-=======
       {/* View Switcher: Browse Workers | Hired Workers */}
       <div className="glass-card" style={{ display:'flex', gap:'4px', padding:'4px', marginBottom:'20px' }}>
         <button
@@ -385,7 +163,6 @@ export default function EmployerDashboard() {
             <span style={{ position:'absolute', top:'-4px', right:'-4px', background:'var(--danger)', color:'#fff', borderRadius:'50%', width:'18px', height:'18px', fontSize:'0.65rem', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700 }}>
               {hiredJobs.length}
             </span>
->>>>>>> origin/main
           )}
         </button>
       </div>
@@ -622,7 +399,7 @@ export default function EmployerDashboard() {
                   </p>
                   <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
                     {acceptedHiredJobs.map(j => {
-                      const w = getWorkerById(j.workerId);
+                      const w = getUserById(j.workerId);
                       return (
                         <div key={j.id} style={{ padding:'16px', background:'linear-gradient(135deg,rgba(124,58,237,0.04),rgba(167,139,250,0.04))', borderRadius:'12px', border:'1px solid rgba(124,58,237,0.15)' }}>
                           <div 
@@ -638,6 +415,22 @@ export default function EmployerDashboard() {
                             </div>
                             <span className="badge" style={{ background:'rgba(124,58,237,0.15)', color:'#7c3aed' }}>Accepted</span>
                           </div>
+
+                          {/* Reveal worker contact info since job is accepted */}
+                          <div style={{ background:'rgba(124,58,237,0.06)', borderRadius:'10px', padding:'10px', marginBottom:'12px' }}>
+                            <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#7c3aed', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📞 Worker Contact</p>
+                            {w?.phone && (
+                              <p style={{ fontSize: '0.88rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                                📱 <strong>{w.phone}</strong>
+                              </p>
+                            )}
+                            {w?.email && (
+                              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                ✉️ {w.email}
+                              </p>
+                            )}
+                          </div>
+
                           <div style={{ display:'flex', gap:'8px', alignItems:'center' }}>
                             <div style={{ position:'relative', flex:1 }}>
                               <Hash size={14} style={{ position:'absolute', left:'10px', top:'50%', transform:'translateY(-50%)', color:'var(--text-muted)' }}/>
@@ -657,7 +450,7 @@ export default function EmployerDashboard() {
                               onClick={async () => {
                                 const result = await verifyAttendanceCode(j.id, codeInputs[j.id]);
                                 if (result.success) {
-                                  showToast(`✅ ${result.message}`);
+                                  showToast(`\u2705 ${result.message}`);
                                   setCodeInputs(prev => { const n = {...prev}; delete n[j.id]; return n; });
                                 } else {
                                   showToast(result.message, 'error');
@@ -746,12 +539,13 @@ export default function EmployerDashboard() {
       {/* Hired Worker Profile Modal with Code Verification */}
       {selectedHiredWorker && (() => {
         const liveJob = employerJobs.find(j => j.id === selectedHiredWorker.jobId);
-        const liveWorker = getWorkerById(selectedHiredWorker.workerId);
+        const liveWorker = getUserById(selectedHiredWorker.workerId);
         const liveStatus = liveJob?.status || 'open';
         
         if (!liveWorker) return null;
         
         const isVerified = liveStatus === 'verified' || liveStatus === 'completed';
+        const isAccepted = liveStatus.startsWith('accepted_');
         
         return (
           <div className="modal-overlay" onClick={() => setSelectedHiredWorker(null)}>
@@ -765,6 +559,23 @@ export default function EmployerDashboard() {
                   <WorkerCard worker={liveWorker} showActions={false} />
                 </div>
 
+                {/* Show contact info if accepted or later */}
+                {(isAccepted || isVerified) && (
+                  <div style={{ padding: '14px 20px', background: 'rgba(124,58,237,0.06)', borderTop: '1px solid var(--border)' }}>
+                    <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#7c3aed', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📞 Worker Contact</p>
+                    {liveWorker.phone && (
+                      <p style={{ fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                        📱 <strong>{liveWorker.phone}</strong>
+                      </p>
+                    )}
+                    {liveWorker.email && (
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                        ✉️ {liveWorker.email}
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {/* Verified \u2013 show success */}
                 {isVerified ? (
                   <div style={{ padding: '14px 20px', background: 'rgba(18,184,134,0.08)', borderTop: '1px solid rgba(18,184,134,0.2)' }}>
@@ -773,7 +584,7 @@ export default function EmployerDashboard() {
                       <p style={{ fontWeight:600, fontSize:'0.88rem', color:'var(--success)' }}>{liveStatus === 'verified' ? '\u2705 Attendance verified successfully' : '\u2705 Job completed'}</p>
                     </div>
                   </div>
-                ) : (
+                ) : isAccepted ? (
                   /* Not verified yet \u2013 always show code input */
                   <div style={{ padding: '16px 20px', background: 'linear-gradient(135deg,rgba(124,58,237,0.06),rgba(167,139,250,0.06))', borderTop: '1px solid rgba(124,58,237,0.2)' }}>
                     <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'10px' }}>
@@ -815,7 +626,7 @@ export default function EmployerDashboard() {
                       </button>
                     </div>
                   </div>
-                )}
+                ) : null}
 
                 <div style={{ padding: '12px 20px 16px', background: 'var(--bg-secondary)', borderTop: '1px solid var(--border)', textAlign:'center' }}>
                   <button className="btn btn-secondary btn-sm" onClick={() => setSelectedHiredWorker(null)} style={{ minWidth:'120px' }}>

@@ -15,7 +15,9 @@ app.post('/api/chat', async (req, res) => {
   try {
     const { messages } = req.body;
 
-    if (!process.env.NVIDIA_API_KEY) {
+    const apiKey = process.env.NVIDIA_API_KEY || process.env.VITE_NVIDIA_API_KEY;
+
+    if (!apiKey) {
       return res.status(500).json({ error: "API key is missing on the server" });
     }
 
@@ -23,7 +25,7 @@ app.post('/api/chat', async (req, res) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.NVIDIA_API_KEY}`
+        'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
         model: "meta/llama-3.1-8b-instruct",

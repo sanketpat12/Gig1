@@ -212,6 +212,36 @@ export function AuthProvider({ children }) {
           .single();
 
         if (profileError) {
+          // Attempt to repair the missing profile
+          const pendingRaw = sessionStorage.getItem('gig_pending_registration');
+          let newUser = null;
+          
+          if (pendingRaw) {
+             const pendingData = JSON.parse(pendingRaw);
+             newUser = { ...pendingData, id: authData.user.id, jobsDone: 0 };
+          } else {
+             // Absolute fallback if no pending data: recreate a basic profile based on their Auth email + chosen login role
+             newUser = {
+               id: authData.user.id,
+               role: role,
+               name: email.split('@')[0], 
+               email: email,
+               password: password,
+               phone: '1234567890', 
+               jobsDone: 0
+             };
+          }
+          
+          const dbPayload = buildDbPayload(newUser);
+          const { error: insertError } = await supabase.from('users').insert(dbPayload);
+          
+          if (!insertError) {
+             setCurrentUser(newUser);
+             setUsers(prev => [...prev, newUser]);
+             if (pendingRaw) sessionStorage.removeItem('gig_pending_registration');
+             return { success: true, user: newUser };
+          }
+          
           await supabase.auth.signOut();
           return { success: false, message: 'User profile not found. Please register again.' };
         }

@@ -27,26 +27,86 @@ const TABS = [
   { id:'earnings',  label:'Earnings',  icon:<Wallet size={16}/> },
   { id:'profile',   label:'Profile',   icon:<UserCircle2 size={16}/> },
 ];
-const OPEN_JOBS = [
-  { id:'oj1', title:'Plumber needed urgently',   employer:'Mehta Residences',  city:'Mumbai',    budget:'₹500',    duration:'Half day', skills:['Plumbing'],             posted:'2h ago' },
-  { id:'oj2', title:'Office deep cleaning',       employer:'TechPark Facilities',city:'Pune',     budget:'₹1,200',  duration:'Full day', skills:['Cleaning'],             posted:'5h ago' },
-  { id:'oj3', title:'Electrical rewiring – 2BHK', employer:'Sharma Family',    city:'Delhi',     budget:'₹800',    duration:'Full day', skills:['Electrical'],           posted:'1d ago' },
-  { id:'oj4', title:'Driver required – airport',  employer:'AnantTravel',      city:'Mumbai',    budget:'₹650',    duration:'4 hrs',   skills:['Driving'],              posted:'3h ago' },
-  { id:'oj5', title:'Babysitter weekends',        employer:'Gupta Family',     city:'Bangalore', budget:'₹400/day',duration:'Weekend',  skills:['Babysitting'],          posted:'6h ago' },
-  { id:'oj6', title:'Home painting – 3BHK',       employer:'Singh Properties', city:'Delhi',     budget:'₹4,500',  duration:'3 days',  skills:['Painting'],             posted:'2d ago' },
-  { id:'oj7', title:'IT support – router setup',  employer:'startup.io',       city:'Bangalore', budget:'₹300',    duration:'2 hrs',   skills:['IT Support'],           posted:'4h ago' },
-  { id:'oj8', title:'Carpentry – wardrobe fix',   employer:'Patel Residence',  city:'Ahmedabad', budget:'₹600',    duration:'Half day', skills:['Carpentry'],           posted:'1d ago' },
-];
+
+
+// ── Job Detail Modal ─────────────────────────────────────────────────────────
+function JobDetailModal({ job, onClose, onApply, isApplied }) {
+  if (!job) return null;
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content glass-card animate-fadeInUp" onClick={e => e.stopPropagation()} style={{ maxWidth:'500px' }}>
+        <div className="modal-header">
+          <h2 style={{ fontSize:'1.25rem' }}>Job Details</h2>
+          <button className="btn-icon" onClick={onClose}><X size={20}/></button>
+        </div>
+        
+        <div style={{ marginBottom:'20px' }}>
+          <h1 style={{ fontSize:'1.4rem', fontWeight:800 }}>{job.title}</h1>
+          <p style={{ color:'var(--text-secondary)', fontSize:'0.9rem', marginTop:'4px' }}>
+            Posted by <strong style={{color:'var(--text-primary)'}}>{job.employerName || job.employer}</strong>
+          </p>
+        </div>
+
+        <div className="grid-2" style={{ marginBottom:'20px', gap:'12px' }}>
+          <div className="glass-card" style={{ padding:'12px' }}>
+            <p style={{ color:'var(--text-muted)', fontSize:'0.75rem', marginBottom:'4px' }}>Budget / Payment</p>
+            <p style={{ color:'var(--success)', fontWeight:700, fontSize:'1.1rem' }}>
+              <IndianRupee size={14}/> {job.budget || job.paymentAmount || 'Negotiable'}
+            </p>
+          </div>
+          <div className="glass-card" style={{ padding:'12px' }}>
+            <p style={{ color:'var(--text-muted)', fontSize:'0.75rem', marginBottom:'4px' }}>Duration</p>
+            <p style={{ color:'var(--text-primary)', fontWeight:600, fontSize:'1.1rem' }}>
+              <Clock size={14} style={{ marginRight:'4px' }}/>{job.duration || 'Not specified'}
+            </p>
+          </div>
+        </div>
+
+        <div style={{ marginBottom:'20px' }}>
+          <p style={{ fontWeight:600, fontSize:'0.9rem', marginBottom:'8px' }}>Location</p>
+          <p style={{ color:'var(--text-secondary)', fontSize:'0.9rem' }}>
+            <MapPin size={14} style={{ marginRight:'6px' }}/>{job.location || job.city || 'Remote'}
+          </p>
+        </div>
+
+        <div style={{ marginBottom:'20px' }}>
+          <p style={{ fontWeight:600, fontSize:'0.9rem', marginBottom:'8px' }}>Required Skills</p>
+          <div style={{ display:'flex', gap:'6px', flexWrap:'wrap' }}>
+            {(job.skills || []).map(s => <span key={s} className="tag tag-primary">{s}</span>)}
+            {(!job.skills || job.skills.length === 0) && <span style={{ color:'var(--text-muted)', fontSize:'0.85rem' }}>None specified</span>}
+          </div>
+        </div>
+
+        <button
+          className={`btn ${isApplied ? 'btn-secondary' : 'btn-primary'}`}
+          style={{ width:'100%', padding:'12px', fontSize:'1rem' }}
+          disabled={isApplied}
+          onClick={onApply}
+        >
+          {isApplied ? <><CheckCircle size={18}/> Already Applied</> : <><Briefcase size={18}/> Apply Now</>}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 // ── Find Jobs (needs its own state so must be a top-level component) ──────────
-function FindJobsTab({ appliedJobs, setAppliedJobs, showToast }) {
+function FindJobsTab({ openJobs, appliedJobs, setAppliedJobs, showToast, applyForJob, currentUser }) {
   const [searchSkill, setSearchSkill] = useState('');
   const [searchCity,  setSearchCity]  = useState('');
+  const [selectedJob, setSelectedJob] = useState(null);
 
-  const filtered = OPEN_JOBS.filter(j => {
-    const matchSkill = !searchSkill || j.skills.some(s => s.toLowerCase().includes(searchSkill.toLowerCase()));
-    const matchCity  = !searchCity  || j.city.toLowerCase().includes(searchCity.toLowerCase());
-    return matchSkill && matchCity;
+  const filtered = openJobs.filter(j => {
+    // 1. Text Search matches
+    const matchSkill = !searchSkill || (j.skills && j.skills.some(s => s.toLowerCase().includes(searchSkill.toLowerCase()))) || (j.title && j.title.toLowerCase().includes(searchSkill.toLowerCase()));
+    const matchCity  = !searchCity  || (j.city && j.city.toLowerCase().includes(searchCity.toLowerCase())) || (j.location && j.location.toLowerCase().includes(searchCity.toLowerCase()));
+    
+    // 2. ONLY show if the required skills overlap with the worker's skills (unless job has no specific skills required)
+    const workerSkills = currentUser?.skills || [];
+    const jobSkills = j.skills || [];
+    const overlaps = jobSkills.length === 0 || jobSkills.some(s => workerSkills.some(ws => ws.toLowerCase() === s.toLowerCase()));
+    
+    return matchSkill && matchCity && overlaps;
   });
 
   return (
@@ -88,31 +148,44 @@ function FindJobsTab({ appliedJobs, setAppliedJobs, showToast }) {
               </div>
 
               <div style={{ display:'flex', gap:'6px', flexWrap:'wrap', margin:'10px 0 8px' }}>
-                {j.skills.map(s => <span key={s} className="tag" style={{ fontSize:'0.72rem' }}>{s}</span>)}
+                {(j.skills || []).map(s => <span key={s} className="tag" style={{ fontSize:'0.72rem' }}>{s}</span>)}
               </div>
 
               <div className="wd-open-job-meta">
-                <span><MapPin size={12}/> {j.city}</span>
+                <span><MapPin size={12}/> {j.location || j.city}</span>
                 <span><Clock size={12}/> {j.duration}</span>
-                <span style={{ color:'var(--success)', fontWeight:700 }}><IndianRupee size={12}/> {j.budget}</span>
+                <span style={{ color:'var(--success)', fontWeight:700 }}><IndianRupee size={12}/> {j.budget || j.paymentAmount}</span>
               </div>
 
               <button
-                className={`btn btn-sm ${appliedJobs.includes(j.id) ? 'btn-secondary' : 'btn-primary'}`}
+                className="btn btn-sm btn-secondary"
                 style={{ width:'100%', marginTop:'12px' }}
-                disabled={appliedJobs.includes(j.id)}
-                onClick={() => {
-                  setAppliedJobs(p => [...p, j.id]);
-                  showToast(`Applied for "${j.title}"! Employer will contact you.`);
-                }}
+                onClick={() => setSelectedJob(j)}
               >
-                {appliedJobs.includes(j.id)
-                  ? <><CheckCircle size={13}/> Applied</>
-                  : <><ArrowRight size={13}/> Apply Now</>}
+                View Details
               </button>
             </div>
           ))}
         </div>
+      )}
+
+      {selectedJob && (
+        <JobDetailModal
+          job={selectedJob}
+          onClose={() => setSelectedJob(null)}
+          isApplied={appliedJobs.includes(selectedJob.id)}
+          onApply={() => {
+            setAppliedJobs(p => [...p, selectedJob.id]);
+            applyForJob({
+              employerId: selectedJob.employerId,
+              workerId: currentUser.id,
+              employerName: selectedJob.employerName || selectedJob.employer,
+              workerName: currentUser.name
+            });
+            showToast(`Applied for "${selectedJob.title}"! Employer will be notified.`);
+            setSelectedJob(null);
+          }}
+        />
       )}
     </div>
   );
@@ -120,7 +193,7 @@ function FindJobsTab({ appliedJobs, setAppliedJobs, showToast }) {
 
 // ── Main Worker Dashboard component ──────────────────────────────────────────
 export default function WorkerDashboard() {
-  const { currentUser, updateUser, getReviewsForWorker, getAvgRating, jobs, updateJobStatus } = useAuth();
+  const { currentUser, updateUser, getReviewsForWorker, getAvgRating, jobs, releasedJobs, applyForJob, updateJobStatus } = useAuth();
 
   const [activeTab,    setActiveTab]    = useState('overview');
   const [toast,        setToast]        = useState(null);
@@ -707,9 +780,12 @@ export default function WorkerDashboard() {
     jobs:     jobsTab,
     findjobs: (
       <FindJobsTab
+        currentUser={currentUser}
+        openJobs={releasedJobs || []}
         appliedJobs={appliedJobs}
         setAppliedJobs={setAppliedJobs}
         showToast={showToast}
+        applyForJob={applyForJob}
       />
     ),
     earnings: earningsTab,

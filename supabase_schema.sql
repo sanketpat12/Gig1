@@ -54,3 +54,18 @@ CREATE TABLE public.hiring_details (
     status text DEFAULT 'active',
     "createdAt" text NOT NULL
 );
+
+-- Create released_jobs table (Open jobs posted by employers)
+CREATE TABLE public.released_jobs (
+    id text PRIMARY KEY,
+    "employerId" text REFERENCES public.users(id) ON DELETE CASCADE,
+    "employerName" text,
+    title text,
+    "typeOfWork" text,
+    duration text,
+    budget text,
+    location text,
+    skills jsonb,
+    status text DEFAULT 'open',
+    "createdAt" text NOT NULL
+);

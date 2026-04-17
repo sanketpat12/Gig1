@@ -85,6 +85,7 @@ export function AuthProvider({ children }) {
   const [users, setUsers] = useState([...DEFAULT_WORKERS, DEFAULT_EMPLOYER]);
   const [reviews, setReviews] = useState(DEFAULT_REVIEWS);
   const [jobs, setJobs] = useState([]);
+  const [releasedJobs, setReleasedJobs] = useState([]);
   const [hiringDetails, setHiringDetails] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -94,11 +95,12 @@ export function AuthProvider({ children }) {
       try {
         const { data: { session } } = await supabase.auth.getSession();
 
-        const [{ data: dbUsers }, { data: dbReviews }, { data: dbJobs }, { data: dbHirings }] = await Promise.all([
+        const [{ data: dbUsers }, { data: dbReviews }, { data: dbJobs }, { data: dbHirings }, { data: dbReleasedJobs }] = await Promise.all([
           supabase.from('users').select('*'),
           supabase.from('reviews').select('*'),
           supabase.from('jobs').select('*'),
-          supabase.from('hiring_details').select('*')
+          supabase.from('hiring_details').select('*'),
+          supabase.from('released_jobs').select('*')
         ]);
 
         // Merge DB users with defaults (defaults act as demo/seed data)
@@ -115,6 +117,7 @@ export function AuthProvider({ children }) {
         if (dbReviews && dbReviews.length > 0) setReviews(dbReviews);
         if (dbJobs && dbJobs.length > 0) setJobs(dbJobs);
         if (dbHirings && dbHirings.length > 0) setHiringDetails(dbHirings);
+        if (dbReleasedJobs && dbReleasedJobs.length > 0) setReleasedJobs(dbReleasedJobs);
       } catch (err) {
         console.warn('Failed to load from Supabase:', err);
       } finally {
@@ -379,12 +382,33 @@ export function AuthProvider({ children }) {
   };
 
   const postJob = async (jobData) => {
-    const newJob = { ...jobData, id: `job_${Date.now()}`, status: 'open', createdAt: new Date().toISOString() };
+    const newJob = { ...jobData, id: `job_${Date.now()}`, status: jobData.status || 'open', createdAt: new Date().toISOString() };
     try {
       await supabase.from('jobs').insert(newJob);
     } catch (e) { console.warn('Supabase error on postJob', e); }
 
     setJobs(prev => [...prev, newJob]);
+    return newJob;
+  };
+
+  const applyForJob = async (jobData) => {
+    // Links a worker to an employer's open job with status 'applied'
+    const newJob = { ...jobData, id: `job_${Date.now()}`, status: 'applied', createdAt: new Date().toISOString() };
+    try {
+      await supabase.from('jobs').insert(newJob);
+    } catch (e) { console.warn('Supabase error on applyForJob', e); }
+
+    setJobs(prev => [...prev, newJob]);
+    return newJob;
+  };
+
+  const releaseJob = async (jobData) => {
+    const newJob = { ...jobData, id: `rjob_${Date.now()}`, status: 'open', createdAt: new Date().toISOString() };
+    try {
+      await supabase.from('released_jobs').insert(newJob);
+    } catch (e) { console.warn('Supabase error on releaseJob', e); }
+
+    setReleasedJobs(prev => [newJob, ...prev]);
     return newJob;
   };
 
@@ -415,11 +439,11 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{
-      currentUser, users, reviews, jobs, hiringDetails, loading,
+      currentUser, users, reviews, jobs, releasedJobs, hiringDetails, loading,
       login, register, logout, updateUser,
       getWorkers, getWorkerById,
       getReviewsForWorker, getAvgRating, addReview,
-      postJob, getJobsForEmployer, getJobsForWorker, updateJobStatus,
+      postJob, releaseJob, applyForJob, getJobsForEmployer, getJobsForWorker, updateJobStatus,
       addHiringDetail, getHiringDetailsForWorker, getHiringDetailsForEmployer,
       getCities, getLocalities,
     }}>

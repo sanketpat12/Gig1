@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import WorkerCard from '../components/WorkerCard';
 import ReviewModal from '../components/ReviewModal';
-import { Search, MapPin, Filter, Briefcase, Home, Building2, SlidersHorizontal, X } from 'lucide-react';
+import { Search, MapPin, Filter, Briefcase, Home, Building2, SlidersHorizontal, X, PlusCircle, Bell, CheckCircle } from 'lucide-react';
 import './EmployerDashboard.css';
 
 const WORK_TYPE_OPTIONS = [
@@ -11,7 +11,7 @@ const WORK_TYPE_OPTIONS = [
 ];
 
 export default function EmployerDashboard() {
-  const { currentUser, getWorkers, getCities, getLocalities, postJob } = useAuth();
+  const { currentUser, getWorkers, getCities, getLocalities, postJob, releaseJob, getJobsForEmployer, updateJobStatus } = useAuth();
 
   /* Work type selection */
   const [workType, setWorkType] = useState(null);
@@ -25,6 +25,10 @@ export default function EmployerDashboard() {
 
   /* Review modal */
   const [reviewWorker, setReviewWorker] = useState(null);
+  
+  /* Release job modal */
+  const [showReleaseModal, setShowReleaseModal] = useState(false);
+  
   const [toast, setToast] = useState(null);
 
   const cities = getCities();
@@ -41,6 +45,10 @@ export default function EmployerDashboard() {
   };
 
   const clearFilters = () => { setCity(''); setLocality(''); setSkill(''); setAvailability(''); };
+
+  // Pending worker applications to open jobs
+  const employerJobs = getJobsForEmployer(currentUser?.id);
+  const pendingApplications = employerJobs.filter(j => j.status === 'applied');
 
   if (!workType) {
     return (
@@ -84,15 +92,62 @@ export default function EmployerDashboard() {
           </span>
           <span className="worker-count">{workers.length} worker{workers.length !== 1 ? 's' : ''} found</span>
         </div>
-        <button
-          id="toggle-filters"
-          className={`btn btn-secondary btn-sm ${showFilters ? 'filter-active' : ''}`}
-          onClick={() => setShowFilters(!showFilters)}
-        >
-          <SlidersHorizontal size={15}/> Filters
-          {(city || skill || availability) && <span className="filter-dot"/>}
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={() => setShowReleaseModal(true)}
+          >
+            <PlusCircle size={15}/> Post Open Job
+          </button>
+          <button
+            id="toggle-filters"
+            className={`btn btn-secondary btn-sm ${showFilters ? 'filter-active' : ''}`}
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <SlidersHorizontal size={15}/> Filters
+            {(city || skill || availability) && <span className="filter-dot"/>}
+          </button>
+        </div>
       </div>
+
+      {/* Notifications / Pending Applications */}
+      {pendingApplications.length > 0 && (
+        <div className="glass-card animate-fadeInUp" style={{ marginBottom: '20px', borderLeft: '4px solid var(--primary)', padding: '16px 20px', background: 'rgba(41,98,255,0.05)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+            <Bell size={18} style={{ color: 'var(--primary)' }}/>
+            <h3 style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--primary)' }}>New Applications ({pendingApplications.length})</h3>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {pendingApplications.map(app => (
+              <div key={app.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <div>
+                  <p style={{ fontWeight: 600, fontSize: '0.9rem' }}>{app.workerName} applied for your job</p>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Worker ID: {app.workerId.substring(0,8)}... • Applied recently</p>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button 
+                    className="btn btn-sm btn-primary"
+                    onClick={() => {
+                      updateJobStatus(app.id, 'open'); // Convert to a regular 'open' incoming job for the worker
+                      showToast(`You hired ${app.workerName}! They will see it in their dashboard.`);
+                    }}
+                  >
+                    <CheckCircle size={14}/> Hire
+                  </button>
+                  <button 
+                    className="btn btn-sm btn-secondary"
+                    onClick={() => {
+                      updateJobStatus(app.id, 'rejected');
+                    }}
+                  >
+                    Decline
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Filters Panel */}
       {showFilters && (
@@ -182,10 +237,106 @@ export default function EmployerDashboard() {
         />
       )}
 
+      {/* Release Job Modal */}
+      {showReleaseModal && (
+        <ReleaseJobModal
+          onClose={() => setShowReleaseModal(false)}
+          onRelease={async (jobData) => {
+            await releaseJob({ ...jobData, employerId: currentUser.id, employerName: currentUser.name });
+            setShowReleaseModal(false);
+            showToast('Job released successfully! Workers can now find and apply for it.');
+          }}
+        />
+      )}
+
       {/* Toast */}
       {toast && (
         <div className={`toast toast-${toast.type}`}>{toast.msg}</div>
       )}
+    </div>
+  );
+}
+
+// ── RELEASE JOB MODAL ────────────────────────────────────────────────────────
+function ReleaseJobModal({ onClose, onRelease }) {
+  const [formData, setFormData] = useState({
+    title: '',
+    typeOfWork: '',
+    duration: '',
+    budget: '',
+    location: '',
+    skills: '' // Comma separated
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const skillsArray = formData.skills.split(',').map(s => s.trim()).filter(s => s.length > 0);
+    onRelease({
+      ...formData,
+      skills: skillsArray
+    });
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content glass-card animate-fadeInUp" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+        <div className="modal-header">
+          <h2 style={{ fontSize: '1.25rem' }}>Release an Open Job</h2>
+          <button className="btn-icon" onClick={onClose}><X size={20}/></button>
+        </div>
+
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '20px' }}>
+          Post a job describing what you need. Workers will see it in their dashboard and can apply directly.
+        </p>
+
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="form-group">
+            <label className="form-label">Job Title</label>
+            <input type="text" className="form-input" required placeholder="e.g. Office deep cleaning"
+              value={formData.title} onChange={e => setFormData(f => ({...f, title: e.target.value}))} />
+          </div>
+
+          <div className="grid-2">
+            <div className="form-group">
+              <label className="form-label">Type of Work</label>
+              <select className="form-select" required value={formData.typeOfWork} onChange={e => setFormData(f => ({...f, typeOfWork: e.target.value}))}>
+                <option value="">Select...</option>
+                <option value="home">Home / Personal</option>
+                <option value="business">Business</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Location (City)</label>
+              <input type="text" className="form-input" required placeholder="e.g. Pune"
+                value={formData.location} onChange={e => setFormData(f => ({...f, location: e.target.value}))} />
+            </div>
+          </div>
+
+          <div className="grid-2">
+            <div className="form-group">
+              <label className="form-label">Duration</label>
+              <input type="text" className="form-input" required placeholder="e.g. Full day, 4 hours"
+                value={formData.duration} onChange={e => setFormData(f => ({...f, duration: e.target.value}))} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Budget / Payment</label>
+              <input type="text" className="form-input" required placeholder="e.g. ₹1200, ₹400/hr"
+                value={formData.budget} onChange={e => setFormData(f => ({...f, budget: e.target.value}))} />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Required Skills (comma separated)</label>
+            <input type="text" className="form-input" placeholder="e.g. Cleaning, Plumbing"
+              value={formData.skills} onChange={e => setFormData(f => ({...f, skills: e.target.value}))} />
+          </div>
+
+          <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
+            <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={onClose}>Cancel</button>
+            <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Post Job</button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

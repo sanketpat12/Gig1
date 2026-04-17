@@ -194,7 +194,7 @@ function FindJobsTab({ openJobs, appliedJobs, setAppliedJobs, showToast, applyFo
 
 // ── Main Worker Dashboard component ──────────────────────────────────────────
 export default function WorkerDashboard() {
-  const { currentUser, updateUser, getReviewsForWorker, getAvgRating, jobs, releasedJobs, applyForJob, updateJobStatus } = useAuth();
+  const { currentUser, updateUser, getReviewsForWorker, getAvgRating, jobs, releasedJobs, applyForJob, updateJobStatus, getUserById } = useAuth();
 
   const [activeTab,    setActiveTab]    = useState('overview');
   const [toast,        setToast]        = useState(null);
@@ -208,6 +208,7 @@ export default function WorkerDashboard() {
   const myJobs       = (jobs || []).filter(j => j.workerId === currentUser.id);
   const completedJobs = myJobs.filter(j => j.status === 'completed');
   const pendingJobs  = myJobs.filter(j => j.status === 'open');
+  const activeJobs   = myJobs.filter(j => j.status === 'accepted');
 
   const completionScore = useMemo(() => {
     let s = 0;
@@ -503,8 +504,8 @@ export default function WorkerDashboard() {
                     </div>
                     <div style={{ display:'flex', gap:'8px', marginTop:'10px' }}>
                       <button className="btn btn-success btn-sm" style={{ flex:1 }}
-                        onClick={() => { updateJobStatus(j.id,'completed'); showToast('Job accepted & marked complete!'); }}>
-                        <CheckCircle size={13}/> Accept & Complete
+                        onClick={() => { updateJobStatus(j.id,'accepted'); showToast('Job accepted! Employer will be notified.'); }}>
+                        <CheckCircle size={13}/> Accept Job
                       </button>
                       <button className="btn btn-danger btn-sm" style={{ flex:1 }}
                         onClick={() => { updateJobStatus(j.id,'rejected'); showToast('Job declined.','error'); }}>
@@ -513,6 +514,60 @@ export default function WorkerDashboard() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {activeJobs.length > 0 && (
+            <div className="glass-card">
+              <h3 className="wd-jobs-section-title" style={{ color:'#7c3aed' }}>
+                <Zap size={15}/> Active / Ongoing ({activeJobs.length})
+              </h3>
+              <div className="wd-jobs-list">
+                {activeJobs.map(j => {
+                  const employer = getUserById(j.employerId);
+                  return (
+                    <div key={j.id} className="glass-card" style={{ padding:'16px', border:'2px solid #7c3aed33', borderRadius:'14px' }}>
+                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'12px' }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+                          <div className="avatar avatar-sm" style={{ background:'linear-gradient(135deg,#7c3aed,#a855f7)' }}>
+                            {j.employerName?.[0]?.toUpperCase()}
+                          </div>
+                          <div>
+                            <p style={{ fontWeight:700, fontSize:'0.9rem' }}>{j.employerName}</p>
+                            <p style={{ fontSize:'0.72rem', color:'var(--text-muted)' }}>
+                              {new Date(j.createdAt).toLocaleDateString('en-IN', { day:'numeric', month:'short' })}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="badge" style={{ background:'#7c3aed22', color:'#7c3aed', border:'1px solid #7c3aed44' }}>🟣 Active</span>
+                      </div>
+
+                      {/* Employer Contact Info */}
+                      <div style={{ background:'rgba(124,58,237,0.06)', borderRadius:'10px', padding:'12px', marginBottom:'12px' }}>
+                        <p style={{ fontSize:'0.75rem', fontWeight:700, color:'#7c3aed', marginBottom:'8px', textTransform:'uppercase', letterSpacing:'0.05em' }}>📞 Employer Contact</p>
+                        {employer?.phone && (
+                          <p style={{ fontSize:'0.85rem', color:'var(--text-primary)', marginBottom:'4px' }}>
+                            📱 <strong>{employer.phone}</strong>
+                          </p>
+                        )}
+                        {employer?.email && (
+                          <p style={{ fontSize:'0.85rem', color:'var(--text-secondary)' }}>
+                            ✉️ {employer.email}
+                          </p>
+                        )}
+                        {!employer?.phone && !employer?.email && (
+                          <p style={{ fontSize:'0.82rem', color:'var(--text-muted)' }}>Contact info not available</p>
+                        )}
+                      </div>
+
+                      <button className="btn btn-success btn-sm" style={{ width:'100%' }}
+                        onClick={() => { updateJobStatus(j.id,'completed'); showToast('Job marked as complete! Great work! 🎉'); }}>
+                        <CheckCircle size={13}/> Mark Job as Complete
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

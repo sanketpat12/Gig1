@@ -11,7 +11,7 @@ const WORK_TYPE_OPTIONS = [
 ];
 
 export default function EmployerDashboard() {
-  const { currentUser, getWorkers, getCities, getLocalities, postJob, releaseJob, removeReleasedJob, getJobsForEmployer, updateJobStatus, getWorkerById } = useAuth();
+  const { currentUser, getWorkers, getCities, getLocalities, postJob, releaseJob, removeReleasedJob, getJobsForEmployer, updateJobStatus, getWorkerById, getUserById } = useAuth();
 
   /* Work type selection - Persist in sessionStorage so 'back' button doesn't reset it */
   const [workType, setWorkType] = useState(() => sessionStorage.getItem('gig_emp_workType') || null);
@@ -63,6 +63,7 @@ export default function EmployerDashboard() {
   // Pending worker applications to open jobs
   const employerJobs = getJobsForEmployer(currentUser?.id);
   const pendingApplications = employerJobs.filter(j => j.status === 'applied');
+  const ongoingHires = employerJobs.filter(j => j.status === 'open' || j.status === 'accepted');
   
   // Reconstruct selectedApplicant from persisted ID
   const selectedApplicantApp = pendingApplications.find(a => a.id === selectedAppId);
@@ -230,7 +231,62 @@ export default function EmployerDashboard() {
         </div>
       )}
 
-      {/* Filters Panel */}
+      {/* Ongoing Hires Section */}
+      {ongoingHires.length > 0 && (
+        <div className="glass-card animate-fadeInUp" style={{ marginBottom: '20px', borderLeft: '4px solid #7c3aed', padding: '16px 20px', background: 'rgba(124,58,237,0.04)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+            <CheckCircle size={18} style={{ color: '#7c3aed' }}/>
+            <h3 style={{ fontWeight: 700, fontSize: '1rem', color: '#7c3aed' }}>Ongoing Hires ({ongoingHires.length})</h3>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {ongoingHires.map(job => {
+              const worker = getUserById(job.workerId);
+              const isAccepted = job.status === 'accepted';
+              return (
+                <div key={job.id} style={{ background: '#fff', borderRadius: '12px', padding: '14px 16px', border: `1px solid ${isAccepted ? '#22c55e44' : '#7c3aed33'}` }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div className="avatar avatar-sm" style={{ background: isAccepted ? 'linear-gradient(135deg,#43e97b,#12b886)' : 'linear-gradient(135deg,#7c3aed,#a855f7)', fontSize: '0.85rem' }}>
+                        {job.workerName?.[0]?.toUpperCase()}
+                      </div>
+                      <div>
+                        <p style={{ fontWeight: 700, fontSize: '0.9rem' }}>{job.workerName}</p>
+                        <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                          Hired on {new Date(job.createdAt).toLocaleDateString('en-IN', { day:'numeric', month:'short' })}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="badge" style={isAccepted
+                      ? { background:'#22c55e22', color:'#16a34a', border:'1px solid #22c55e44' }
+                      : { background:'#7c3aed22', color:'#7c3aed', border:'1px solid #7c3aed44' }
+                    }>
+                      {isAccepted ? '✅ Accepted' : '⏳ Waiting for Acceptance'}
+                    </span>
+                  </div>
+
+                  {/* Show contact info only once worker accepted */}
+                  {isAccepted && (
+                    <div style={{ marginTop: '12px', background: 'rgba(34,197,94,0.06)', borderRadius: '10px', padding: '12px' }}>
+                      <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#16a34a', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📞 Worker Contact</p>
+                      {worker?.phone && (
+                        <p style={{ fontSize: '0.88rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                          📱 <strong>{worker.phone}</strong>
+                        </p>
+                      )}
+                      {worker?.email && (
+                        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                          ✉️ {worker.email}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {showFilters && (
         <div className="filter-panel glass-card animate-fadeInUp">
           <div className="filter-row">

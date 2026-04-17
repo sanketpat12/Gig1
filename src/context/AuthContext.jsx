@@ -357,6 +357,7 @@ export function AuthProvider({ children }) {
   };
 
   const getWorkerById = (id) => users.find(u => u.id === id);
+  const getUserById = (id) => users.find(u => u.id === id);
 
   const getReviewsForWorker = (workerId) => reviews.filter(r => r.workerId === workerId);
 
@@ -460,7 +461,7 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider value={{
       currentUser, users, reviews, jobs, releasedJobs, hiringDetails, loading,
       login, register, logout, updateUser,
-      getWorkers, getWorkerById,
+      getWorkers, getWorkerById, getUserById,
       getReviewsForWorker, getAvgRating, addReview,
       postJob, releaseJob, removeReleasedJob, applyForJob, getJobsForEmployer, getJobsForWorker, updateJobStatus,
       addHiringDetail, getHiringDetailsForWorker, getHiringDetailsForEmployer,

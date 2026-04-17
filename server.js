@@ -14,7 +14,7 @@ const API_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
 app.post('/api/chat', async (req, res) => {
   try {
     const { messages } = req.body;
-    
+
     if (!process.env.NVIDIA_API_KEY) {
       return res.status(500).json({ error: "API key is missing on the server" });
     }

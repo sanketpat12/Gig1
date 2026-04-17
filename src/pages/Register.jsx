@@ -68,55 +68,29 @@ export default function Register() {
   const toggleJobType = (t) => setJobType(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
   const toggleLanguage = (l) => setLanguages(prev => prev.includes(l) ? prev.filter(x => x !== l) : [...prev, l]);
 
-  // AI Voice Automation State
+  // AI Voice Guide State
   const [aiLoading, setAiLoading] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef(null);
-  const formStateRef = useRef({ role, name, email, phone, password, city, locality, skills });
+  const formStateRef = useRef({ role, name, email, phone, password, city, locality, skills, step });
 
   useEffect(() => {
-    formStateRef.current = { role, name, email, phone, password, city, locality, skills };
-  }, [role, name, email, phone, password, city, locality, skills]);
+    formStateRef.current = { role, name, email, phone, password, city, locality, skills, step };
+  }, [role, name, email, phone, password, city, locality, skills, step]);
 
   useEffect(() => {
     return () => {
       window.speechSynthesis.cancel();
-      if (recognitionRef.current) recognitionRef.current.stop();
     };
   }, []);
 
-  const triggerAiGuide = async (isInitial = false) => {
-    if (isSpeaking || isListening || aiLoading) {
-      window.speechSynthesis.cancel();
-      if (recognitionRef.current) recognitionRef.current.stop();
-      setIsSpeaking(false);
-      setIsListening(false);
-      setAiLoading(false);
-      return;
-    }
-    
-    if (isInitial) {
-      speakAndListen("Hi! I'm your GigNav AI Assistant. Let's get you registered! First, are you going to join as an Employer looking to hire, or a Worker looking for jobs?");
-    } else {
-      startListening();
-    }
-  };
-
-  const speakAndListen = (text) => {
-    window.speechSynthesis.cancel();
-    setAiLoading(false);
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => {
-      setIsSpeaking(false);
-      startListening();
-    };
-    utterance.onerror = () => setIsSpeaking(false);
-    window.speechSynthesis.speak(utterance);
-  };
-
   const startListening = () => {
+    if (isSpeaking || aiLoading) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      setAiLoading(false);
+    }
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       alert("Voice recognition not supported in this browser.");
@@ -124,14 +98,14 @@ export default function Register() {
     }
     if (recognitionRef.current) recognitionRef.current.stop();
     const recognition = new SpeechRecognition();
-    recognition.lang = 'en-US';
+    recognition.lang = 'en-US'; // Default to listen for anything, speech recognition is pretty good multi-lingually
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
     
     recognition.onstart = () => setIsListening(true);
     recognition.onresult = (e) => {
       const transcript = e.results[0][0].transcript;
-      handleAiResponse(transcript);
+      handleVoiceGuide(transcript);
     };
     recognition.onerror = () => setIsListening(false);
     recognition.onend = () => setIsListening(false);
@@ -140,37 +114,31 @@ export default function Register() {
     recognition.start();
   };
 
-  const handleAiResponse = async (transcript) => {
+  const handleVoiceGuide = async (transcript) => {
     setAiLoading(true);
-    const { role: curRole, name: curName, email: curEmail, phone: curPhone, password: curPass, city: curCity, locality: curLoc, skills: curSkills } = formStateRef.current;
+    const { role: curRole, name: curName, email: curEmail, phone: curPhone, password: curPass, city: curCity, locality: curLoc, skills: curSkills, step: curStep } = formStateRef.current;
     
-    const systemPrompt = `You are a voice AI helping a user fill out the GigNav registration process.
-The user just replied with: "${transcript}"
+    let stateDesc = `User Role: ${curRole || 'Not Selected'}. Name: ${curName ? 'Filled' : 'Empty'}. Email: ${curEmail ? 'Filled' : 'Empty'}. Phone: ${curPhone ? 'Filled' : 'Empty'}. Password: ${curPass ? 'Filled' : 'Empty'}.`;
+    if (curRole === 'worker') {
+        stateDesc += ` City: ${curCity ? 'Filled' : 'Empty'}, Locality: ${curLoc ? 'Filled' : 'Empty'}, Skills: ${curSkills.length > 0 ? curSkills.length + ' filled' : 'Empty'}. They are currently on Step ${curStep} out of 3.`;
+    } else {
+        stateDesc += ` They are currently on the registration page.`;
+    }
+    
+    const systemPrompt = `You are a helpful voice guide for the GigNav registration process.
+Current form status: ${stateDesc}
 
-Current form state:
-- Role: ${curRole || 'Not Set'}
-- Name: ${curName || 'Not Set'}
-- Email: ${curEmail || 'Not Set'}
-- Phone: ${curPhone || 'Not Set'}
-- Password: ${curPass || 'Not Set'}
-- City: ${curCity || 'Not Set'}
-- Locality: ${curLoc || 'Not Set'}
-- Skills: ${curSkills.length > 0 ? curSkills.join(", ") : 'Not Set'}
+The user just asked this via microphone: "${transcript}"
 
-Instructions:
-1. Extract any new form fields provided in their reply. 
-   - CRITICAL: Format emails strictly (e.g. if they say "rajesh at gmail dot com", convert to "rajesh@gmail.com"). Emails ALWAYS contain an '@' symbol. DO NOT extract email text into the phone field.
-   - Make phone numbers strictly numerical digits ONLY. Phone numbers NEVER contain letters, '@', or words.
-   - For skills, extract an array of strings (e.g. ["Plumbing", "Carpentry"]).
-2. Determine the NEXT missing required field:
-   - REQUIRED FOR ALL: role (employer or worker), name, email, phone, password.
-   - REQUIRED ONLY FOR WORKER: city, locality, skills (at least one).
-3. If everything required is filled, set "next_question" exactly to "ALL_DONE". Otherwise formulate a short 1-sentence question asking for the NEXT missing field.
-
-Return STRICTLY raw JSON data matching this schema without markdown or backticks:
+Evaluate what they asked. Give a short, helpful, 1 or 2 sentence spoken ANWSER/INSTRUCTION to guide them.
+CRITICAL RULES:
+1. Do NOT ask them any questions as they cannot easily reply back.
+2. Identify the language the user used to ask the question (e.g., Hindi, English, Marathi, Tamil, etc).
+3. Draft your response natively in exactly that SAME language.
+4. Output STRICTLY raw JSON data matching this schema:
 {
-  "extracted": { "role": "", "name": "", "email": "", "phone": "", "password": "", "city": "", "locality": "", "skills": [] },
-  "next_question": "string"
+  "lang_code": "en-US", // use appropriate TTS lang code like hi-IN, mr-IN, ta-IN, en-US
+  "spoken_response": "string"
 }`;
 
     try {
@@ -180,69 +148,45 @@ Return STRICTLY raw JSON data matching this schema without markdown or backticks
         body: JSON.stringify({ messages: [{ role: 'system', content: systemPrompt }] })
       });
       const data = await res.json();
-      let rawText = data.choices[0].message.content || '';
-      rawText = rawText.replace(/```json/g,'').replace(/```/g,'').trim();
+      let rawText = data.choices[0].message.content || '{}';
+      rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
       const parsed = JSON.parse(rawText);
 
-      const ext = parsed.extracted || {};
+      const utterance = new SpeechSynthesisUtterance(parsed.spoken_response || "Sorry, I couldn't understand.");
+      if (parsed.lang_code) utterance.lang = parsed.lang_code;
       
-      // Auto-advance logic based on what was filled
-      if (ext.role) {
-         const cleanRole = ext.role.toLowerCase().replace(/[^a-z]/g, '');
-         if (cleanRole === 'employer' || cleanRole === 'worker') { setRole(cleanRole); setPhase(1); }
-      }
-      if (ext.name && ext.name !== 'Not Set') setName(ext.name);
+      utterance.onstart = () => setIsSpeaking(true);
+      utterance.onend = () => setIsSpeaking(false);
+      utterance.onerror = () => setIsSpeaking(false);
       
-      // Enforce extra frontend email cleaning just in case
-      if (ext.email && ext.email !== 'Not Set') {
-        let cleanEmail = ext.email.toLowerCase().replace(/\s/g, '').replace('at','@').replace('dot','.');
-        setEmail(cleanEmail);
-      }
-      
-      if (ext.phone && ext.phone !== 'Not Set') setPhone(ext.phone.replace(/[^0-9]/g, ''));
-      if (ext.password && ext.password !== 'Not Set') setPassword(ext.password.replace(/\s/g, ''));
-      
-      if (ext.city && ext.city !== 'Not Set') { setCity(ext.city); setRole('worker'); setPhase(1); setStep(2); }
-      if (ext.locality && ext.locality !== 'Not Set') { setLocality(ext.locality); setRole('worker'); setPhase(1); setStep(2); }
-      
-      if (Array.isArray(ext.skills) && ext.skills.length > 0) {
-        setSkills(prev => [...new Set([...prev, ...ext.skills])]);
-        setRole('worker'); setPhase(1); setStep(3);
-      }
-
-      if (parsed.next_question === "ALL_DONE") {
-        setAiLoading(false);
-        const finalizeMsg = new SpeechSynthesisUtterance("All required fields are filled. I will now create your account.");
-        window.speechSynthesis.speak(finalizeMsg);
-        
-        // Automatically click the final submit button after speaking
-        setTimeout(() => {
-          document.getElementById('reg-submit')?.click();
-        }, 3000);
-      } else if (parsed.next_question) {
-        speakAndListen(parsed.next_question);
-      } else {
-        setAiLoading(false);
-      }
-    } catch (e) {
+      setAiLoading(false);
+      window.speechSynthesis.speak(utterance);
+    } catch(e) {
       console.error(e);
-      speakAndListen("Sorry, I didn't catch that correctly. Can you say that again?");
+      setAiLoading(false);
     }
   };
 
-  const renderAiButton = () => (
-    <button 
-      type="button"
-      onClick={() => isListening || isSpeaking || aiLoading ? triggerAiGuide() : triggerAiGuide(true)}
-      className={`login-ai-guide-btn ${(isSpeaking || isListening) ? 'active' : ''}`}
-      title="Voice Auto-Fill"
-      style={{ zIndex: 10 }}
-    >
-      {aiLoading ? <Bot size={16} className="animate-pulse" /> : 
-       isListening ? <Mic size={16} className="animate-pulse" /> :
-       isSpeaking ? <VolumeX size={16} /> : <Bot size={16} />}
-      <span>{aiLoading ? 'Processing...' : isListening ? 'Listening...' : isSpeaking ? 'Stop Guide' : 'Auto Fill'}</span>
-    </button>
+  const renderAiBox = () => (
+    <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 10 }}>
+      {isListening && (
+        <span style={{ fontSize: '0.75rem', position: 'absolute', background: 'var(--surface)', top: 0, right: 120, whiteSpace: 'nowrap', padding: '6px 12px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+          Listening...
+        </span>
+      )}
+      <button 
+        type="button"
+        onClick={isListening ? () => { if(recognitionRef.current) recognitionRef.current.stop(); } : startListening}
+        className={`login-ai-guide-btn ${isSpeaking || isListening ? 'active' : ''}`}
+        title="Voice Guide"
+        style={{ position: 'relative', padding: '8px 14px' }}
+      >
+        {aiLoading ? <Bot size={16} className="animate-pulse" /> : 
+         isSpeaking ? <VolumeX size={16} /> : 
+         isListening ? <Mic size={16} className="animate-pulse" /> : <Mic size={16} />}
+        <span>{aiLoading ? 'Thinking...' : isSpeaking ? 'Stop Guide' : isListening ? 'Tap to Stop' : 'Ask AI Help'}</span>
+      </button>
+    </div>
   );
 
   const validateStep1 = () => {
@@ -373,7 +317,7 @@ Return STRICTLY raw JSON data matching this schema without markdown or backticks
     return (
       <div className="auth-page role-select-page">
         <div className="role-select-container animate-fadeInUp" style={{position:'relative'}}>
-          {renderAiButton()}
+          {renderAiBox()}
           <div className="auth-logo" style={{ justifyContent:'center', marginBottom:'8px' }}>
             <div className="logo-icon"><Briefcase size={18}/></div>
             <span className="logo-text">GigNav</span>
@@ -437,7 +381,7 @@ Return STRICTLY raw JSON data matching this schema without markdown or backticks
   return (
     <div className="auth-page">
       <div className="auth-box glass-card animate-fadeInUp" style={{ maxWidth: role === 'worker' ? '520px' : '460px', position: 'relative' }}>
-        {renderAiButton()}
+        {renderAiBox()}
         <div className="auth-logo">
           <div className="logo-icon"><Briefcase size={18}/></div>
           <span className="logo-text">GigNav</span>

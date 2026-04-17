@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Briefcase, HardHat, LogIn, Eye, EyeOff, Bot, Volume2, VolumeX } from 'lucide-react';
+import { Briefcase, HardHat, LogIn, Eye, EyeOff, Bot, Volume2, VolumeX, Mic } from 'lucide-react';
 import './Auth.css';
 
 export default function Login() {
@@ -15,6 +15,13 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef(null);
+  const formStateRef = useRef({ email, password, role, error });
+
+  useEffect(() => {
+    formStateRef.current = { email, password, role, error };
+  }, [email, password, role, error]);
 
   // Stop speaking when component unmounts
   useEffect(() => {
@@ -37,58 +44,97 @@ export default function Login() {
     }, 600);
   };
 
-  const handleVoiceGuide = async () => {
-    if (isSpeaking || aiLoading) {
-      window.speechSynthesis.cancel();
-      setIsSpeaking(false);
-      setAiLoading(false);
-      return;
-    }
-
+  const handleVoiceGuide = async (transcript) => {
     setAiLoading(true);
-    let situationText = `The user is on the Login page for GigNav. They have currently selected the role: ${role}. `;
-    
-    if (!email && !password) {
-      situationText += "They haven't entered their email or password yet. Tell them to enter their credentials and make sure they selected the correct role.";
-    } else if (!email) {
-      situationText += "They entered a password but no email. Tell them they still need to provide an email.";
-    } else if (!password) {
-      situationText += "They entered an email but no password. Tell them they still need to provide a password.";
-    } else if (error) {
-      situationText += `They tried to login and got this error message: "${error}". Give them a short tip on how to fix it or what to check.`;
-    } else {
-      situationText += "They have entered both email and password. Tell them they are ready to click 'Sign In', or they can try the Demo Accounts below if they are just testing the app.";
-    }
+    const { email: curEmail, password: curPass, role: curRole, error: curError } = formStateRef.current;
 
-    const systemPrompt = "You are a helpful and friendly voice AI assistant for GigNav. Provide a very short, natural-sounding spoken guidance (1 to 2 sentences max) based on the user's situation. Do not use markdown, emojis, or bullet points because this will be read out loud by a text-to-speech engine.";
+    let situationText = `The user is on the Login page trying to log in as a ${curRole || 'unselected role'}. `;
+    if (!curEmail && !curPass) {
+      situationText += "They haven't entered their email or password yet.";
+    } else if (!curEmail) {
+      situationText += "They entered a password but no email.";
+    } else if (!curPass) {
+      situationText += "They entered an email but no password.";
+    } else {
+      situationText += "They have entered both email and password.";
+    }
+    
+    if (curError) situationText += ` There is currently an error on their screen: "${curError}".`;
+
+    const systemPrompt = `You are a helpful voice guide for the GigNav login page.
+Current form status: ${situationText}
+
+The user just asked this via microphone: "${transcript}"
+
+Evaluate what they asked. Give a short, helpful, 1 or 2 sentence spoken ANSWER/INSTRUCTION to guide them.
+CRITICAL RULES:
+1. Do NOT ask them any questions as they cannot easily reply back.
+2. Identify the language the user used to ask the question (e.g., Hindi, English, Marathi, Tamil, etc).
+3. Draft your response natively in exactly that SAME language.
+4. Output STRICTLY raw JSON data matching this schema:
+{
+  "lang_code": "en-US", // use appropriate TTS lang code like hi-IN, mr-IN, ta-IN, en-US
+  "spoken_response": "string"
+}`;
 
     try {
       const res = await fetch("http://localhost:3001/api/chat", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: situationText }
-          ]
+          messages: [{ role: 'system', content: systemPrompt }]
         })
       });
 
       if (!res.ok) throw new Error('API failed');
       const data = await res.json();
-      const reply = data.choices && data.choices[0] && data.choices[0].message.content;
+      let rawText = data.choices[0].message.content || '{}';
+      rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(rawText);
 
-      if (reply) {
-        speakText(reply);
-      } else {
-        speakText("I'm sorry, I couldn't understand the situation.");
-      }
+      const utterance = new SpeechSynthesisUtterance(parsed.spoken_response || "Sorry, I couldn't understand.");
+      if (parsed.lang_code) utterance.lang = parsed.lang_code;
+
+      utterance.onstart = () => setIsSpeaking(true);
+      utterance.onend = () => setIsSpeaking(false);
+      utterance.onerror = () => setIsSpeaking(false);
+
+      setAiLoading(false);
+      window.speechSynthesis.speak(utterance);
     } catch (err) {
       console.error(err);
+      setAiLoading(false);
       speakText("I'm having trouble connecting to my brain right now. Please make sure the AI server is running.");
-    } finally {
+    }
+  };
+
+  const startListening = () => {
+    if (isSpeaking || aiLoading) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
       setAiLoading(false);
     }
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Voice recognition not supported in this browser.");
+      return;
+    }
+    if (recognitionRef.current) recognitionRef.current.stop();
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    
+    recognition.onstart = () => setIsListening(true);
+    recognition.onresult = (e) => {
+      const transcript = e.results[0][0].transcript;
+      handleVoiceGuide(transcript);
+    };
+    recognition.onerror = () => setIsListening(false);
+    recognition.onend = () => setIsListening(false);
+    
+    recognitionRef.current = recognition;
+    recognition.start();
   };
 
   const speakText = (text) => {
@@ -146,19 +192,27 @@ export default function Login() {
       <div className="auth-box glass-card animate-fadeInUp" style={{ position: 'relative' }}>
         
         {/* Floating AI Guide Button */}
+        {isListening && (
+          <span style={{ fontSize: '0.75rem', position: 'absolute', background: 'var(--surface)', top: 12, right: 120, whiteSpace: 'nowrap', padding: '6px 12px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 9999 }}>
+            Listening...
+          </span>
+        )}
         <button 
-          onClick={handleVoiceGuide}
-          className={`login-ai-guide-btn ${isSpeaking ? 'active' : ''}`}
+          type="button"
+          onClick={isListening ? () => { if(recognitionRef.current) recognitionRef.current.stop(); } : startListening}
+          className={`login-ai-guide-btn ${isSpeaking || isListening ? 'active' : ''}`}
           title="AI Voice Guide"
         >
           {aiLoading ? (
             <Bot size={16} className="animate-pulse" />
           ) : isSpeaking ? (
             <VolumeX size={16} />
+          ) : isListening ? (
+            <Mic size={16} className="animate-pulse" />
           ) : (
-            <Bot size={16} />
+            <Mic size={16} />
           )}
-          <span>{aiLoading ? 'Thinking...' : isSpeaking ? 'Stop Guide' : 'Voice Guide'}</span>
+          <span>{aiLoading ? 'Thinking...' : isSpeaking ? 'Stop Guide' : isListening ? 'Tap to Stop' : 'Ask AI Help'}</span>
         </button>
 
         <div className="auth-logo">

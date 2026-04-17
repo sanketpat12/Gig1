@@ -45,6 +45,20 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
+// Serve frontend static files
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+app.use(express.static(path.join(__dirname, 'dist')));
+
+// Handle React routing, return all requests to React app
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
+
 app.listen(PORT, () => {
   console.log(`Backend securely running on port ${PORT}`);
 });

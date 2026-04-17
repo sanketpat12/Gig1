@@ -404,10 +404,14 @@ export default function WorkerDashboard() {
           { label:'Reviews',     val: reviews.length,       color:'var(--warning)', bg:'rgba(245,159,0,0.08)',  icon:<Star size={18}/> },
           { label:'Avg Rating',  val: avg > 0 ? avg : '—', color:'#7c3aed',        bg:'rgba(124,58,237,0.08)', icon:<Award size={18}/> },
         ].map(s => (
-          <div key={s.label} className="glass-card wd-quick-stat-card" style={{ borderTop:`3px solid ${s.color}` }}>
-            <div style={{ color:s.color, background:s.bg, padding:'8px', borderRadius:'10px', width:'fit-content' }}>{s.icon}</div>
-            <p className="wd-qs-val" style={{ color:s.color }}>{s.val}</p>
-            <p className="wd-qs-label">{s.label}</p>
+          <div key={s.label} className="glass-card wd-quick-stat-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div style={{ color:s.color, background:s.bg, padding:'10px', borderRadius:'12px' }}>{s.icon}</div>
+            </div>
+            <div style={{ marginTop: 'auto' }}>
+              <p className="wd-qs-val" style={{ color:s.color }}>{s.val}</p>
+              <p className="wd-qs-label">{s.label}</p>
+            </div>
           </div>
         ))}
       </div>

@@ -229,36 +229,44 @@
   border-bottom-color: var(--primary);
 }
 
-/* ─── Desktop tabs ───────────────────────────────────── */
+/* ─── Desktop tabs (Premium Segmented Control) ─────────── */
 .wd-desktop-tabs {
   display: flex;
   padding: 6px;
-  gap: 4px;
-  border-radius: 18px;
-  margin-bottom: 20px;
+  gap: 8px;
+  border-radius: 16px;
+  margin-bottom: 24px;
+  background: rgba(0, 0, 0, 0.03);
+  width: fit-content;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
 }
 
 .wd-dtab-btn {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 9px 18px;
+  gap: 8px;
+  padding: 10px 20px;
   border-radius: 12px;
   border: none;
-  background: none;
-  font-family: 'Inter', sans-serif;
-  font-size: 0.85rem;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.9rem;
   font-weight: 600;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
 }
-.wd-dtab-btn:hover { color: var(--primary); background: rgba(41,98,255,0.05); }
+.wd-dtab-btn:hover { 
+  color: var(--primary); 
+  background: rgba(255, 255, 255, 0.5); 
+}
 .wd-dtab-active {
-  background: var(--primary) !important;
-  color: #fff !important;
-  box-shadow: 0 4px 14px rgba(41,98,255,0.3);
+  background: #ffffff !important;
+  color: var(--primary) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0,0,0,0.02);
+  transform: translateY(-1px);
 }
 
 /* ─── Main content area ──────────────────────────────── */
@@ -277,71 +285,107 @@
   gap: 10px;
 }
 
-/* ─── Welcome banner ─────────────────────────────────── */
+/* ─── Welcome banner (Mesh Gradient & Glass) ──────────── */
 .wd-welcome-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  background: linear-gradient(135deg, rgba(41,98,255,0.04), rgba(18,184,134,0.04));
-  border: 1px solid rgba(41,98,255,0.1);
+  background: radial-gradient(circle at top left, rgba(41,98,255,0.06), transparent 60%),
+              radial-gradient(circle at bottom right, rgba(18,184,134,0.06), transparent 60%),
+              rgba(255,255,255,0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.9);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.03);
+  position: relative;
+  overflow: hidden;
+}
+
+.wd-welcome-banner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="noiseFilter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noiseFilter)"/></svg>');
+  opacity: 0.02;
+  mix-blend-mode: overlay;
+  pointer-events: none;
 }
 
 .wd-score-circle {
-  width: 68px;
-  height: 68px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
-  border: 3px solid rgba(41,98,255,0.15);
+  border: 4px solid rgba(255,255,255,0.9);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  background: rgba(255,255,255,0.7);
+  background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(240,245,255,0.9));
+  box-shadow: 0 8px 24px rgba(41,98,255,0.12), inset 0 2px 8px rgba(255,255,255,1);
+  position: relative;
+  z-index: 1;
 }
 
-/* ─── Quick stats row ────────────────────────────────── */
+/* ─── Quick stats row (Premium Soft UI) ───────────────── */
 .wd-quick-stats-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  gap: 16px;
 }
 
 .wd-quick-stat-card {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 18px 16px;
-  border-radius: 20px;
+  padding: 20px 18px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255,255,255,1);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.03), inset 0 2px 4px rgba(255,255,255,0.8);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  overflow: hidden;
+}
+
+.wd-quick-stat-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.06), inset 0 2px 4px rgba(255,255,255,1);
 }
 
 .wd-qs-val {
-  font-size: 1.5rem;
-  font-weight: 900;
+  font-size: 1.8rem;
+  font-weight: 800;
   line-height: 1;
+  letter-spacing: -0.02em;
+  margin-top: 4px;
 }
 .wd-qs-label {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  font-weight: 600;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
 }
 
-/* ─── Empty prompt ───────────────────────────────────── */
+/* ─── Empty prompt (Dynamic Dashed Focus) ───────────── */
 .wd-empty-prompt {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
+  padding: 24px;
   cursor: pointer;
-  transition: var(--transition);
-  border: 2px dashed var(--border);
-  background: transparent;
+  transition: all 0.3s ease;
+  border: 2px dashed rgba(41,98,255,0.15);
+  background: rgba(255,255,255,0.5);
+  border-radius: 24px;
 }
 .wd-empty-prompt:hover {
-  border-color: var(--primary);
-  background: rgba(41,98,255,0.02);
-  transform: translateY(-2px);
+  border-color: rgba(41,98,255,0.4);
+  background: rgba(255,255,255,0.9);
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 16px 36px rgba(41,98,255,0.06);
 }
 
 /* ─── Reviews ────────────────────────────────────────── */

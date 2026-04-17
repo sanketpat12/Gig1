@@ -353,3 +353,56 @@
   color: var(--text-primary);
   letter-spacing: -0.02em;
 }
+
+/* ─── AI Voice Guide Button ───────────────────────────────────── */
+.login-ai-guide-btn {
+  position: absolute;
+  top: 30px;
+  right: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(41,98,255,0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 10;
+}
+
+.login-ai-guide-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(41,98,255,0.4);
+}
+
+.login-ai-guide-btn.active {
+  background: linear-gradient(135deg, #ff6584, #e03a5f);
+  box-shadow: 0 4px 14px rgba(255,101,132,0.4);
+  animation: bg-pulse-border 2s infinite;
+}
+
+.login-ai-guide-btn span {
+  white-space: nowrap;
+}
+
+@keyframes bg-pulse-border {
+  0% { box-shadow: 0 0 0 0 rgba(255,101,132,0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(255,101,132,0); }
+  100% { box-shadow: 0 0 0 0 rgba(255,101,132,0); }
+}
+
+@media (max-width: 600px) {
+  .login-ai-guide-btn {
+    top: 20px;
+    right: 20px;
+    padding: 6px 12px;
+    font-size: 0.75rem;
+  }
+}

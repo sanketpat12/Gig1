@@ -7,7 +7,7 @@
 }
 .worker-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 0 1px rgba(108,99,255,0.2);
+  box-shadow: 0 16px 42px rgba(41, 98, 255, 0.08), 0 0 0 1px var(--primary-light);
 }
 .wc-header {
   display: flex;
@@ -19,11 +19,11 @@
 .wc-name { font-size: 1rem; font-weight: 700; color: var(--text-primary); }
 .wc-location {
   display: flex; align-items: center; gap: 4px;
-  font-size: 0.78rem; color: rgba(240,240,255,0.55);
+  font-size: 0.78rem; color: var(--text-secondary);
 }
 .wc-rating { display: flex; align-items: center; gap: 6px; }
 .rating-num { font-size: 0.82rem; font-weight: 700; color: #ffd200; }
-.rating-count { font-size: 0.75rem; color: rgba(240,240,255,0.4); }
+.rating-count { font-size: 0.75rem; color: var(--text-muted); }
 .avail-dot {
   width: 10px; height: 10px;
   border-radius: 50%;
@@ -34,7 +34,7 @@
 .avail-no  { background: #ff6584; color: #ff6584; }
 .wc-bio {
   font-size: 0.83rem;
-  color: rgba(240,240,255,0.55);
+  color: var(--text-secondary);
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -49,7 +49,7 @@
 }
 .wc-stat {
   display: flex; align-items: center; gap: 4px;
-  font-size: 0.78rem; color: rgba(240,240,255,0.5);
+  font-size: 0.78rem; color: var(--text-secondary);
 }
 .rate { font-weight: 700; color: #43e97b; font-size: 0.88rem; }
 .wc-jobtypes { display: flex; gap: 6px; flex-wrap: wrap; }

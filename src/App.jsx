@@ -8,6 +8,7 @@ import WorkerDashboard from './pages/WorkerDashboard';
 import WorkerProfile from './pages/WorkerProfile';
 import ConfirmEmail from './pages/ConfirmEmail';
 import Navbar from './components/Navbar';
+import AIAssistant from './components/AIAssistant';
 
 function PrivateRoute({ children, role }) {
   const { currentUser } = useAuth();
@@ -31,6 +32,7 @@ function AppRoutes() {
         <Route path="/worker/:id" element={<WorkerProfile />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
+      <AIAssistant />
     </>
   );
 }

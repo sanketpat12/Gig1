@@ -8,7 +8,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 const API_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
 
 app.post('/api/chat', async (req, res) => {

@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   Briefcase, HardHat, Plus, X, CheckCircle,
   ChevronRight, ChevronLeft, Eye, EyeOff,
-  MapPin, DollarSign, User, Zap, ArrowRight
+  MapPin, DollarSign, User, Zap, ArrowRight,
+  Bot, VolumeX, Mic, Volume2
 } from 'lucide-react';
 import './Auth.css';
 
@@ -66,6 +67,183 @@ export default function Register() {
   const removeSkill = (s) => setSkills(prev => prev.filter(k => k !== s));
   const toggleJobType = (t) => setJobType(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
   const toggleLanguage = (l) => setLanguages(prev => prev.includes(l) ? prev.filter(x => x !== l) : [...prev, l]);
+
+  // AI Voice Automation State
+  const [aiLoading, setAiLoading] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef(null);
+  const formStateRef = useRef({ role, name, email, phone, password, city, locality, skills });
+
+  useEffect(() => {
+    formStateRef.current = { role, name, email, phone, password, city, locality, skills };
+  }, [role, name, email, phone, password, city, locality, skills]);
+
+  useEffect(() => {
+    return () => {
+      window.speechSynthesis.cancel();
+      if (recognitionRef.current) recognitionRef.current.stop();
+    };
+  }, []);
+
+  const triggerAiGuide = async (isInitial = false) => {
+    if (isSpeaking || isListening || aiLoading) {
+      window.speechSynthesis.cancel();
+      if (recognitionRef.current) recognitionRef.current.stop();
+      setIsSpeaking(false);
+      setIsListening(false);
+      setAiLoading(false);
+      return;
+    }
+    
+    if (isInitial) {
+      speakAndListen("Hi! I'm your GigNav AI Assistant. Let's get you registered! First, are you going to join as an Employer looking to hire, or a Worker looking for jobs?");
+    } else {
+      startListening();
+    }
+  };
+
+  const speakAndListen = (text) => {
+    window.speechSynthesis.cancel();
+    setAiLoading(false);
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      startListening();
+    };
+    utterance.onerror = () => setIsSpeaking(false);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const startListening = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Voice recognition not supported in this browser.");
+      return;
+    }
+    if (recognitionRef.current) recognitionRef.current.stop();
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    
+    recognition.onstart = () => setIsListening(true);
+    recognition.onresult = (e) => {
+      const transcript = e.results[0][0].transcript;
+      handleAiResponse(transcript);
+    };
+    recognition.onerror = () => setIsListening(false);
+    recognition.onend = () => setIsListening(false);
+    
+    recognitionRef.current = recognition;
+    recognition.start();
+  };
+
+  const handleAiResponse = async (transcript) => {
+    setAiLoading(true);
+    const { role: curRole, name: curName, email: curEmail, phone: curPhone, password: curPass, city: curCity, locality: curLoc, skills: curSkills } = formStateRef.current;
+    
+    const systemPrompt = `You are a voice AI helping a user fill out the GigNav registration process.
+The user just replied with: "${transcript}"
+
+Current form state:
+- Role: ${curRole || 'Not Set'}
+- Name: ${curName || 'Not Set'}
+- Email: ${curEmail || 'Not Set'}
+- Phone: ${curPhone || 'Not Set'}
+- Password: ${curPass || 'Not Set'}
+- City: ${curCity || 'Not Set'}
+- Locality: ${curLoc || 'Not Set'}
+- Skills: ${curSkills.length > 0 ? curSkills.join(", ") : 'Not Set'}
+
+Instructions:
+1. Extract any new form fields provided in their reply. 
+   - CRITICAL: Format emails strictly (e.g. if they say "rajesh at gmail dot com", convert to "rajesh@gmail.com"). Emails ALWAYS contain an '@' symbol. DO NOT extract email text into the phone field.
+   - Make phone numbers strictly numerical digits ONLY. Phone numbers NEVER contain letters, '@', or words.
+   - For skills, extract an array of strings (e.g. ["Plumbing", "Carpentry"]).
+2. Determine the NEXT missing required field:
+   - REQUIRED FOR ALL: role (employer or worker), name, email, phone, password.
+   - REQUIRED ONLY FOR WORKER: city, locality, skills (at least one).
+3. If everything required is filled, set "next_question" exactly to "ALL_DONE". Otherwise formulate a short 1-sentence question asking for the NEXT missing field.
+
+Return STRICTLY raw JSON data matching this schema without markdown or backticks:
+{
+  "extracted": { "role": "", "name": "", "email": "", "phone": "", "password": "", "city": "", "locality": "", "skills": [] },
+  "next_question": "string"
+}`;
+
+    try {
+      const res = await fetch("http://localhost:3001/api/chat", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: [{ role: 'system', content: systemPrompt }] })
+      });
+      const data = await res.json();
+      let rawText = data.choices[0].message.content || '';
+      rawText = rawText.replace(/```json/g,'').replace(/```/g,'').trim();
+      const parsed = JSON.parse(rawText);
+
+      const ext = parsed.extracted || {};
+      
+      // Auto-advance logic based on what was filled
+      if (ext.role) {
+         const cleanRole = ext.role.toLowerCase().replace(/[^a-z]/g, '');
+         if (cleanRole === 'employer' || cleanRole === 'worker') { setRole(cleanRole); setPhase(1); }
+      }
+      if (ext.name && ext.name !== 'Not Set') setName(ext.name);
+      
+      // Enforce extra frontend email cleaning just in case
+      if (ext.email && ext.email !== 'Not Set') {
+        let cleanEmail = ext.email.toLowerCase().replace(/\s/g, '').replace('at','@').replace('dot','.');
+        setEmail(cleanEmail);
+      }
+      
+      if (ext.phone && ext.phone !== 'Not Set') setPhone(ext.phone.replace(/[^0-9]/g, ''));
+      if (ext.password && ext.password !== 'Not Set') setPassword(ext.password.replace(/\s/g, ''));
+      
+      if (ext.city && ext.city !== 'Not Set') { setCity(ext.city); setRole('worker'); setPhase(1); setStep(2); }
+      if (ext.locality && ext.locality !== 'Not Set') { setLocality(ext.locality); setRole('worker'); setPhase(1); setStep(2); }
+      
+      if (Array.isArray(ext.skills) && ext.skills.length > 0) {
+        setSkills(prev => [...new Set([...prev, ...ext.skills])]);
+        setRole('worker'); setPhase(1); setStep(3);
+      }
+
+      if (parsed.next_question === "ALL_DONE") {
+        setAiLoading(false);
+        const finalizeMsg = new SpeechSynthesisUtterance("All required fields are filled. I will now create your account.");
+        window.speechSynthesis.speak(finalizeMsg);
+        
+        // Automatically click the final submit button after speaking
+        setTimeout(() => {
+          document.getElementById('reg-submit')?.click();
+        }, 3000);
+      } else if (parsed.next_question) {
+        speakAndListen(parsed.next_question);
+      } else {
+        setAiLoading(false);
+      }
+    } catch (e) {
+      console.error(e);
+      speakAndListen("Sorry, I didn't catch that correctly. Can you say that again?");
+    }
+  };
+
+  const renderAiButton = () => (
+    <button 
+      type="button"
+      onClick={() => isListening || isSpeaking || aiLoading ? triggerAiGuide() : triggerAiGuide(true)}
+      className={`login-ai-guide-btn ${(isSpeaking || isListening) ? 'active' : ''}`}
+      title="Voice Auto-Fill"
+      style={{ zIndex: 10 }}
+    >
+      {aiLoading ? <Bot size={16} className="animate-pulse" /> : 
+       isListening ? <Mic size={16} className="animate-pulse" /> :
+       isSpeaking ? <VolumeX size={16} /> : <Bot size={16} />}
+      <span>{aiLoading ? 'Processing...' : isListening ? 'Listening...' : isSpeaking ? 'Stop Guide' : 'Auto Fill'}</span>
+    </button>
+  );
 
   const validateStep1 = () => {
     if (!name.trim())                         { setError('Full name is required.'); return false; }
@@ -194,7 +372,8 @@ export default function Register() {
   if (phase === 0) {
     return (
       <div className="auth-page role-select-page">
-        <div className="role-select-container animate-fadeInUp">
+        <div className="role-select-container animate-fadeInUp" style={{position:'relative'}}>
+          {renderAiButton()}
           <div className="auth-logo" style={{ justifyContent:'center', marginBottom:'8px' }}>
             <div className="logo-icon"><Briefcase size={18}/></div>
             <span className="logo-text">GigNav</span>
@@ -257,7 +436,8 @@ export default function Register() {
   // ── PHASE 1+: Registration form ──────────────────────────────────────────────
   return (
     <div className="auth-page">
-      <div className="auth-box glass-card animate-fadeInUp" style={{ maxWidth: role === 'worker' ? '520px' : '460px' }}>
+      <div className="auth-box glass-card animate-fadeInUp" style={{ maxWidth: role === 'worker' ? '520px' : '460px', position: 'relative' }}>
+        {renderAiButton()}
         <div className="auth-logo">
           <div className="logo-icon"><Briefcase size={18}/></div>
           <span className="logo-text">GigNav</span>

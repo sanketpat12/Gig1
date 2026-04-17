@@ -3,11 +3,6 @@ import { supabase } from '../supabaseClient';
 
 const AuthContext = createContext(null);
 
-const DEFAULT_EMPLOYER = {
-  id: 'e-demo', role: 'employer', name: 'Demo Employer', email: 'employer@demo.com', password: 'demo123',
-  phone: '9000000001', company: 'Demo Corp',
-};
-
 const DEFAULT_WORKERS = [
   {
     id: 'w1', role: 'worker', name: 'Rajesh Kumar', email: 'rajesh@example.com', password: 'pass123',
@@ -51,6 +46,11 @@ const DEFAULT_WORKERS = [
   },
 ];
 
+const DEFAULT_EMPLOYER = {
+  id: 'e-demo', role: 'employer', name: 'Demo Employer', email: 'employer@demo.com', password: 'demo123',
+  phone: '9000000001', company: 'Demo Corp',
+};
+
 const DEFAULT_REVIEWS = [
   { id: 'r1', workerId: 'w1', employerId: 'e-demo', employerName: 'Demo Employer', rating: 5, comment: 'Rajesh fixed our kitchen sink perfectly! Very professional.', date: '2024-03-10' },
   { id: 'r2', workerId: 'w1', employerId: 'e-demo2', employerName: 'Anita Mehta', rating: 4, comment: 'Good work on electrical wiring. Timely and neat.', date: '2024-02-18' },
@@ -59,47 +59,54 @@ const DEFAULT_REVIEWS = [
   { id: 'r5', workerId: 'w5', employerId: 'e-demo', employerName: 'Demo Employer', rating: 4, comment: 'Reliable driver, always on time. Recommended!', date: '2024-03-15' },
 ];
 
-function getStorage(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch { return fallback; }
-}
-function setStorage(key, val) {
-  localStorage.setItem(key, JSON.stringify(val));
-}
+// Helper: build db payload matching schema columns only
+const buildDbPayload = (userData) => ({
+  id: userData.id,
+  role: userData.role,
+  name: userData.name,
+  email: userData.email,
+  password: userData.password,
+  phone: userData.phone || '',
+  company: userData.company || null,
+  city: userData.city || null,
+  locality: userData.locality || null,
+  bio: userData.bio || null,
+  skills: userData.skills || null,
+  hourlyRate: userData.hourlyRate || 0,
+  experience: userData.experience || null,
+  jobType: userData.jobType || null,
+  availability: userData.availability || 'available',
+  jobsDone: userData.jobsDone || 0,
+  portfolio: userData.portfolio || null
+});
 
 export function AuthProvider({ children }) {
-  const [currentUser, setCurrentUser] = useState(() => getStorage('gig_user', null));
-  const [users, setUsers] = useState(() => {
-    const stored = getStorage('gig_users', null);
-    const defaults = [...DEFAULT_WORKERS, DEFAULT_EMPLOYER];
-    if (!stored || stored.length === 0) return defaults;
-    // Ensure default workers and demo employer are always present
-    const hasWorkers = stored.some(u => u.role === 'worker');
-    const hasDemoEmployer = stored.some(u => u.id === 'e-demo');
-    let list = stored;
-    if (!hasWorkers) list = [...DEFAULT_WORKERS, ...list.filter(u => u.role !== 'worker')];
-    if (!hasDemoEmployer) list = [DEFAULT_EMPLOYER, ...list.filter(u => u.id !== 'e-demo')];
-    return list;
-  });
-  const [reviews, setReviews] = useState(() => getStorage('gig_reviews', DEFAULT_REVIEWS));
-  const [jobs, setJobs] = useState(() => getStorage('gig_jobs', []));
+  const [currentUser, setCurrentUser] = useState(null);
+  const [users, setUsers] = useState([...DEFAULT_WORKERS, DEFAULT_EMPLOYER]);
+  const [reviews, setReviews] = useState(DEFAULT_REVIEWS);
+  const [jobs, setJobs] = useState([]);
+  const [hiringDetails, setHiringDetails] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Load from Supabase on mount
+  // Load ALL data from Supabase on mount
   useEffect(() => {
     async function loadData() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        
-        const [{ data: dbUsers }, { data: dbReviews }, { data: dbJobs }] = await Promise.all([
+
+        const [{ data: dbUsers }, { data: dbReviews }, { data: dbJobs }, { data: dbHirings }] = await Promise.all([
           supabase.from('users').select('*'),
           supabase.from('reviews').select('*'),
-          supabase.from('jobs').select('*')
+          supabase.from('jobs').select('*'),
+          supabase.from('hiring_details').select('*')
         ]);
-        
+
+        // Merge DB users with defaults (defaults act as demo/seed data)
         if (dbUsers && dbUsers.length > 0) {
-          setUsers(dbUsers);
+          const defaultIds = [...DEFAULT_WORKERS, DEFAULT_EMPLOYER].map(u => u.id);
+          const nonDefaultDbUsers = dbUsers.filter(u => !defaultIds.includes(u.id));
+          setUsers([...DEFAULT_WORKERS, DEFAULT_EMPLOYER, ...nonDefaultDbUsers]);
+
           if (session?.user) {
             const activeProfile = dbUsers.find(u => u.id === session.user.id);
             if (activeProfile) setCurrentUser(activeProfile);
@@ -107,87 +114,231 @@ export function AuthProvider({ children }) {
         }
         if (dbReviews && dbReviews.length > 0) setReviews(dbReviews);
         if (dbJobs && dbJobs.length > 0) setJobs(dbJobs);
+        if (dbHirings && dbHirings.length > 0) setHiringDetails(dbHirings);
       } catch (err) {
         console.warn('Failed to load from Supabase:', err);
+      } finally {
+        setLoading(false);
       }
     }
     loadData();
   }, []);
 
-  useEffect(() => { setStorage('gig_users', users); }, [users]);
-  useEffect(() => { setStorage('gig_reviews', reviews); }, [reviews]);
-  useEffect(() => { setStorage('gig_jobs', jobs); }, [jobs]);
-  useEffect(() => { setStorage('gig_user', currentUser); }, [currentUser]);
+  // Listen for auth state changes (handles email confirmation callback ONLY)
+  useEffect(() => {
+    let isLoggingOut = false;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth event:', event);
+
+      // Only handle email confirmation callback (when pending registration data exists)
+      if (event === 'SIGNED_IN' && session?.user && !isLoggingOut) {
+        const pendingRaw = sessionStorage.getItem('gig_pending_registration');
+        if (pendingRaw) {
+          // This is an email confirmation callback
+          const { data: existingProfile } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+          if (existingProfile) {
+            setCurrentUser(existingProfile);
+            setUsers(prev => {
+              if (prev.find(u => u.id === existingProfile.id)) return prev;
+              return [...prev, existingProfile];
+            });
+            sessionStorage.removeItem('gig_pending_registration');
+          } else {
+            // Profile not in DB yet, create it from pending data
+            try {
+              const pendingData = JSON.parse(pendingRaw);
+              const newUser = { ...pendingData, id: session.user.id, jobsDone: 0 };
+              const dbPayload = buildDbPayload(newUser);
+
+              const { error: insertError } = await supabase.from('users').insert(dbPayload);
+              if (!insertError) {
+                setUsers(prev => [...prev, newUser]);
+                setCurrentUser(newUser);
+                sessionStorage.removeItem('gig_pending_registration');
+              } else {
+                console.warn('Failed to insert confirmed user profile:', insertError);
+              }
+            } catch (e) {
+              console.warn('Error processing pending registration:', e);
+            }
+          }
+        }
+      }
+
+      if (event === 'SIGNED_OUT') {
+        setCurrentUser(null);
+        isLoggingOut = false;
+      }
+    });
+
+    // Expose the logging out flag via a custom method on window for the logout function
+    window.__gigSetLoggingOut = () => { isLoggingOut = true; };
+
+    return () => {
+      subscription.unsubscribe();
+      delete window.__gigSetLoggingOut;
+    };
+  }, []);
 
   const login = async (email, password, role) => {
+    // Demo accounts (not in Supabase Auth)
+    const demoUsers = [...DEFAULT_WORKERS, DEFAULT_EMPLOYER];
+    const demoMatch = demoUsers.find(u => u.email === email && u.password === password && u.role === role);
+    if (demoMatch) {
+      setCurrentUser(demoMatch);
+      return { success: true, user: demoMatch };
+    }
+
+    // Supabase Auth login
     try {
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password });
-      if (!authError && authData?.user) {
-        const { data, error } = await supabase.from('users').select('*').eq('id', authData.user.id).single();
-        if (data) {
-          if (data.role !== role) {
-            await supabase.auth.signOut();
-            return { success: false, message: `Account is registered as ${data.role}.` };
-          }
-          setCurrentUser(data);
-          return { success: true, user: data };
+      if (authError) {
+        return { success: false, message: authError.message };
+      }
+      if (authData?.user) {
+        const { data: profile, error: profileError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', authData.user.id)
+          .single();
+
+        if (profileError) {
+          await supabase.auth.signOut();
+          return { success: false, message: 'User profile not found. Please register again.' };
         }
-      } else {
-        console.warn('Supabase login error:', authError?.message);
+        if (profile.role !== role) {
+          await supabase.auth.signOut();
+          return { success: false, message: `Account is registered as ${profile.role}.` };
+        }
+        setCurrentUser(profile);
+        setUsers(prev => {
+          if (prev.find(u => u.id === profile.id)) return prev;
+          return [...prev, profile];
+        });
+        return { success: true, user: profile };
       }
     } catch (e) {
-      console.warn('Supabase error, trying local auth...', e);
+      return { success: false, message: 'Authentication error: ' + e.message };
     }
-    
-    // Fallback to local
-    const user = users.find(u => u.email === email && u.password === password && u.role === role);
-    if (!user) return { success: false, message: 'Invalid credentials or wrong role.' };
-    setCurrentUser(user);
-    return { success: true, user };
+
+    return { success: false, message: 'Login failed. Please check your credentials.' };
   };
 
   const register = async (data) => {
-    let userId = `u_${Date.now()}`;
+    // Step 1: Try Supabase Auth signUp (email confirmation will be sent)
     try {
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
       });
+
       if (authError) {
-        console.warn('Supabase auth signup failed:', authError.message);
-      } else {
-        userId = authData.user?.id || userId;
+        // If user already exists in Auth, try signing in
+        if (authError.message.includes('already registered') || authError.message.includes('already been registered')) {
+          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+            email: data.email,
+            password: data.password,
+          });
+
+          if (signInError) {
+            return { success: false, message: 'An account with this email already exists. Try logging in or use a different email.' };
+          }
+
+          const userId = signInData.user?.id;
+
+          // Check if profile exists in DB
+          const { data: existingProfile } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', userId)
+            .single();
+
+          if (existingProfile) {
+            setCurrentUser(existingProfile);
+            setUsers(prev => {
+              if (prev.find(u => u.id === existingProfile.id)) return prev;
+              return [...prev, existingProfile];
+            });
+            return { success: true, user: existingProfile };
+          }
+
+          // Profile missing, create it now (user already confirmed)
+          const { password, ...publicData } = data;
+          const newUser = { ...publicData, password, id: userId, jobsDone: 0 };
+          const dbPayload = buildDbPayload(newUser);
+
+          const { error: insertError } = await supabase.from('users').insert(dbPayload);
+          if (insertError) {
+            return { success: false, message: 'Profile creation failed: ' + insertError.message };
+          }
+          setUsers(prev => [...prev, newUser]);
+          setCurrentUser(newUser);
+          return { success: true, user: newUser };
+        }
+
+        return { success: false, message: authError.message };
       }
+
+      // Check if email confirmation is required
+      // When confirm email is ON, identities may be empty or user won't have a confirmed session
+      const needsConfirmation = authData.user && !authData.session;
+
+      if (needsConfirmation) {
+        // Store registration data in sessionStorage for after confirmation
+        const { password, ...publicData } = data;
+        sessionStorage.setItem('gig_pending_registration', JSON.stringify({ ...publicData, password }));
+
+        return {
+          success: false,
+          confirmEmail: true,
+          message: `We've sent a confirmation link to ${data.email}. Please check your inbox and click the link to complete registration.`
+        };
+      }
+
+      // If no confirmation needed (confirm email is OFF), proceed directly
+      const userId = authData.user?.id;
+      if (!userId) {
+        return { success: false, message: 'Failed to create account. Please try again.' };
+      }
+
+      const { password, ...publicData } = data;
+      const newUser = { ...publicData, password, id: userId, jobsDone: 0 };
+      const dbPayload = buildDbPayload(newUser);
+
+      const { error: insertError } = await supabase.from('users').insert(dbPayload);
+      if (insertError) {
+        return { success: false, message: 'Profile creation failed: ' + insertError.message };
+      }
+
+      setUsers(prev => [...prev, newUser]);
+      setCurrentUser(newUser);
+      return { success: true, user: newUser };
+
     } catch (e) {
-      console.warn('Supabase auth exception, proceeding locally...', e);
+      return { success: false, message: e.message || 'Registration failed.' };
     }
-
-    if (users.find(u => u.email === data.email)) {
-      return { success: false, message: 'Email already registered.' };
-    }
-
-    const { password, ...publicData } = data;
-    const newUser = { ...publicData, password, id: userId, jobsDone: 0 };
-    
-    try {
-      await supabase.from('users').insert(newUser);
-    } catch (e) { console.warn('Supabase schema insert failed', e); }
-    
-    setUsers(prev => [...prev, newUser]);
-    setCurrentUser(newUser);
-    return { success: true, user: newUser };
   };
 
   const logout = async () => {
-    try { await supabase.auth.signOut(); } catch (e) {}
+    // Signal the auth listener to ignore the next SIGNED_IN event
+    if (window.__gigSetLoggingOut) window.__gigSetLoggingOut();
     setCurrentUser(null);
+    sessionStorage.removeItem('gig_pending_registration');
+    try { await supabase.auth.signOut(); } catch (e) {}
   };
 
   const updateUser = async (updated) => {
     try {
-      await supabase.from('users').update(updated).eq('id', updated.id);
+      const dbPayload = buildDbPayload(updated);
+      await supabase.from('users').update(dbPayload).eq('id', updated.id);
     } catch (e) { console.warn('Supabase error on update', e); }
-    
+
     setUsers(prev => prev.map(u => u.id === updated.id ? updated : u));
     setCurrentUser(updated);
   };
@@ -221,9 +372,8 @@ export function AuthProvider({ children }) {
         await supabase.from('users').update({ jobsDone: (worker.jobsDone || 0) + 1 }).eq('id', worker.id);
       }
     } catch (e) { console.warn('Supabase error on addReview', e); }
-    
+
     setReviews(prev => [...prev, newReview]);
-    // Increment jobsDone for worker
     setUsers(prev => prev.map(u => u.id === review.workerId ? { ...u, jobsDone: (u.jobsDone || 0) + 1 } : u));
     return newReview;
   };
@@ -233,7 +383,7 @@ export function AuthProvider({ children }) {
     try {
       await supabase.from('jobs').insert(newJob);
     } catch (e) { console.warn('Supabase error on postJob', e); }
-    
+
     setJobs(prev => [...prev, newJob]);
     return newJob;
   };
@@ -251,13 +401,26 @@ export function AuthProvider({ children }) {
   const getCities = () => [...new Set(users.filter(u => u.role === 'worker' && u.city).map(u => u.city))];
   const getLocalities = (city) => [...new Set(users.filter(u => u.role === 'worker' && u.city?.toLowerCase() === city?.toLowerCase() && u.locality).map(u => u.locality))];
 
+  const addHiringDetail = async (hiringData) => {
+    const newDetail = { ...hiringData, id: `hire_${Date.now()}`, createdAt: new Date().toISOString() };
+    try {
+      await supabase.from('hiring_details').insert(newDetail);
+    } catch (e) { console.warn('Supabase error on addHiringDetail', e); }
+    setHiringDetails(prev => [...prev, newDetail]);
+    return newDetail;
+  };
+
+  const getHiringDetailsForWorker = (workerId) => hiringDetails.filter(h => h.workerId === workerId);
+  const getHiringDetailsForEmployer = (employerId) => hiringDetails.filter(h => h.employerId === employerId);
+
   return (
     <AuthContext.Provider value={{
-      currentUser, users, reviews, jobs,
+      currentUser, users, reviews, jobs, hiringDetails, loading,
       login, register, logout, updateUser,
       getWorkers, getWorkerById,
       getReviewsForWorker, getAvgRating, addReview,
       postJob, getJobsForEmployer, getJobsForWorker, updateJobStatus,
+      addHiringDetail, getHiringDetailsForWorker, getHiringDetailsForEmployer,
       getCities, getLocalities,
     }}>
       {children}

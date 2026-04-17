@@ -87,6 +87,9 @@ export default function Register() {
     return true;
   };
 
+  const [confirmEmail, setConfirmEmail] = useState(false);
+  const [confirmEmailAddress, setConfirmEmailAddress] = useState('');
+
   const totalSteps = role === 'worker' ? 3 : 1;
 
   const handleNext = () => {
@@ -110,18 +113,82 @@ export default function Register() {
           hourlyRate: hourlyRate ? Number(hourlyRate) : 0,
           experience, jobType,
           availability: 'available',
-          languages,
-          idVerified: !!idType,
         };
 
     setTimeout(() => {
       register(data).then(result => {
         setLoading(false);
+        if (result.confirmEmail) {
+          // Show email confirmation pending screen
+          setConfirmEmail(true);
+          setConfirmEmailAddress(email);
+          return;
+        }
         if (!result.success) { setError(result.message); return; }
         navigate(role === 'employer' ? '/employer' : '/worker');
       });
     }, 600);
   };
+
+  // ── EMAIL CONFIRMATION PENDING SCREEN ─────────────────────────────────────────
+  if (confirmEmail) {
+    return (
+      <div className="auth-page">
+        <div className="auth-box glass-card animate-fadeInUp" style={{ maxWidth: '480px', textAlign: 'center' }}>
+          <div className="auth-logo" style={{ justifyContent: 'center', marginBottom: '8px' }}>
+            <div className="logo-icon"><Briefcase size={18}/></div>
+            <span className="logo-text">GigNav</span>
+          </div>
+
+          <div style={{
+            width: '72px', height: '72px', borderRadius: '50%',
+            background: 'linear-gradient(135deg, #2962ff22, #2962ff11)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '16px auto 20px',
+            border: '2px solid #2962ff33'
+          }}>
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#2962ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+            </svg>
+          </div>
+
+          <h1 className="auth-title" style={{ fontSize: '1.4rem' }}>Check Your Email</h1>
+          <p style={{
+            color: 'var(--text-secondary)', fontSize: '0.92rem',
+            lineHeight: '1.6', margin: '8px 0 20px'
+          }}>
+            We've sent a confirmation link to<br/>
+            <strong style={{ color: 'var(--primary)', fontSize: '0.95rem' }}>{confirmEmailAddress}</strong>
+          </p>
+
+          <div style={{
+            background: 'var(--primary-light)', borderRadius: '12px',
+            padding: '16px 20px', textAlign: 'left', marginBottom: '20px'
+          }}>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 600, marginBottom: '8px' }}>
+              📋 What to do next:
+            </p>
+            <ol style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', paddingLeft: '18px', lineHeight: '1.8', margin: 0 }}>
+              <li>Open your email inbox</li>
+              <li>Click the confirmation link from GigNav</li>
+              <li>You'll be automatically logged in</li>
+            </ol>
+          </div>
+
+          <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+            Didn't receive the email? Check your spam folder or{' '}
+            <button
+              type="button"
+              style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: 600, cursor: 'pointer', fontSize: '0.78rem' }}
+              onClick={() => { setConfirmEmail(false); setError(''); }}
+            >
+              try again
+            </button>
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // ── PHASE 0: Role selection splash ──────────────────────────────────────────
   if (phase === 0) {

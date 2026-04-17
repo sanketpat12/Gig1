@@ -6,6 +6,7 @@ import Register from './pages/Register';
 import EmployerDashboard from './pages/EmployerDashboard';
 import WorkerDashboard from './pages/WorkerDashboard';
 import WorkerProfile from './pages/WorkerProfile';
+import ConfirmEmail from './pages/ConfirmEmail';
 import Navbar from './components/Navbar';
 
 function PrivateRoute({ children, role }) {
@@ -24,6 +25,7 @@ function AppRoutes() {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={!currentUser ? <Login /> : <Navigate to={currentUser.role === 'employer' ? '/employer' : '/worker'} />} />
         <Route path="/register" element={!currentUser ? <Register /> : <Navigate to={currentUser.role === 'employer' ? '/employer' : '/worker'} />} />
+        <Route path="/confirm-email" element={<ConfirmEmail />} />
         <Route path="/employer" element={<PrivateRoute role="employer"><EmployerDashboard /></PrivateRoute>} />
         <Route path="/worker" element={<PrivateRoute role="worker"><WorkerDashboard /></PrivateRoute>} />
         <Route path="/worker/:id" element={<WorkerProfile />} />

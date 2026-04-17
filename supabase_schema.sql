@@ -40,3 +40,17 @@ CREATE TABLE public.jobs (
     status text DEFAULT 'open',
     "createdAt" text NOT NULL
 );
+
+-- Create hiring_details table
+CREATE TABLE public.hiring_details (
+    id text PRIMARY KEY,
+    "jobId" text REFERENCES public.jobs(id) ON DELETE CASCADE,
+    "workerId" text REFERENCES public.users(id) ON DELETE CASCADE,
+    "employerId" text REFERENCES public.users(id) ON DELETE CASCADE,
+    "startDate" text NOT NULL,
+    "endDate" text,
+    "paymentAmount" numeric,
+    notes text,
+    status text DEFAULT 'active',
+    "createdAt" text NOT NULL
+);

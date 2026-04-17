@@ -281,17 +281,43 @@ export default function WorkerDashboard() {
           {!currentUser.jobType?.length && <span style={{ fontSize:'0.78rem', color:'var(--text-muted)' }}>No work types set</span>}
         </div>
         {/* Availability toggle */}
-        <div
-          className={`wd-avail-toggle ${currentUser.availability === 'available' ? 'avail-on' : 'avail-off'}`}
-          onClick={() => {
-            const updated = { ...currentUser, availability: currentUser.availability === 'available' ? 'busy' : 'available' };
-            updateUser(updated);
-            showToast(updated.availability === 'available' ? '✅ Now showing as Available' : '🔴 Now showing as Busy');
-          }}
-        >
-          <span className="avail-indicator"/>
-          {currentUser.availability === 'available' ? 'Available for Work' : 'Marked as Busy'}
-          <span style={{ fontSize:'0.68rem', marginLeft:'auto', opacity:0.6 }}>tap to toggle</span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', backgroundColor: currentUser.availability === 'available' ? 'rgba(18, 184, 134, 0.1)' : 'rgba(150, 150, 150, 0.1)', borderRadius: '12px', marginTop: '16px', transition: 'all 0.3s ease' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span className={`avail-indicator ${currentUser.availability === 'available' ? 'avail-on' : 'avail-off'}`} style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: currentUser.availability === 'available' ? 'var(--success)' : 'var(--text-muted)' }}/>
+            <span style={{ fontSize: '0.9rem', fontWeight: 600, color: currentUser.availability === 'available' ? 'var(--success)' : 'var(--text-secondary)' }}>
+              {currentUser.availability === 'available' ? 'Available for Work' : 'Busy'}
+            </span>
+          </div>
+          
+          {/* Switch Button */}
+          <div 
+            onClick={() => {
+              const updated = { ...currentUser, availability: currentUser.availability === 'available' ? 'busy' : 'available' };
+              updateUser(updated);
+              showToast(updated.availability === 'available' ? '✅ Now showing as Available' : '🔴 Now showing as Busy');
+            }}
+            style={{
+              width: '44px',
+              height: '24px',
+              borderRadius: '12px',
+              backgroundColor: currentUser.availability === 'available' ? 'var(--success)' : '#cbd5e1',
+              position: 'relative',
+              cursor: 'pointer',
+              transition: 'background-color 0.3s ease'
+             }}
+          >
+            <div style={{
+              width: '20px',
+              height: '20px',
+              borderRadius: '50%',
+              backgroundColor: '#fff',
+              position: 'absolute',
+              top: '2px',
+              left: currentUser.availability === 'available' ? '22px' : '2px',
+              transition: 'left 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+            }} />
+          </div>
         </div>
       </div>
 

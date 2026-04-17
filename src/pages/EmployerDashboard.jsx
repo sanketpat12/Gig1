@@ -11,7 +11,7 @@ const WORK_TYPE_OPTIONS = [
 ];
 
 export default function EmployerDashboard() {
-  const { currentUser, getWorkers, getCities, getLocalities, postJob, releaseJob, getJobsForEmployer, updateJobStatus } = useAuth();
+  const { currentUser, getWorkers, getCities, getLocalities, postJob, releaseJob, getJobsForEmployer, updateJobStatus, getWorkerById } = useAuth();
 
   /* Work type selection */
   const [workType, setWorkType] = useState(null);
@@ -28,6 +28,9 @@ export default function EmployerDashboard() {
   
   /* Release job modal */
   const [showReleaseModal, setShowReleaseModal] = useState(false);
+  
+  /* Applicant Detail modal */
+  const [selectedApplicant, setSelectedApplicant] = useState(null);
   
   const [toast, setToast] = useState(null);
 
@@ -119,12 +122,22 @@ export default function EmployerDashboard() {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {pendingApplications.map(app => (
-              <div key={app.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <div 
+                key={app.id} 
+                onClick={() => {
+                  const workerFullData = getWorkerById(app.workerId);
+                  if (workerFullData) {
+                    setSelectedApplicant({ worker: workerFullData, jobId: app.id });
+                  }
+                }}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', cursor: 'pointer', transition: 'border-color 0.2s', ':hover': { borderColor: 'var(--primary)' } }}
+                className="hover-border-primary"
+              >
                 <div>
                   <p style={{ fontWeight: 600, fontSize: '0.9rem' }}>{app.workerName} applied for your job</p>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Worker ID: {app.workerId.substring(0,8)}... • Applied recently</p>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Tap to view profile • Applied recently</p>
                 </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '8px' }} onClick={e => e.stopPropagation()}>
                   <button 
                     className="btn btn-sm btn-primary"
                     onClick={() => {
@@ -145,6 +158,45 @@ export default function EmployerDashboard() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Applicant Detail Modal */}
+      {selectedApplicant && (
+        <div className="modal-overlay" onClick={() => setSelectedApplicant(null)}>
+          <div className="modal-content animate-fadeInUp" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px', padding: 0, background: 'transparent', boxShadow: 'none' }}>
+            <div style={{ background: '#fff', borderRadius: '16px', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+                <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Applicant Profile</h2>
+                <button className="btn-icon" onClick={() => setSelectedApplicant(null)}><X size={20}/></button>
+              </div>
+              <div style={{ padding: '20px' }}>
+                {/* Re-use the existing beautiful WorkerCard but turn off its own actions */}
+                <WorkerCard worker={selectedApplicant.worker} showActions={false} />
+              </div>
+              <div style={{ display: 'flex', gap: '12px', padding: '16px 20px', background: 'var(--bg-secondary)', borderTop: '1px solid var(--border)' }}>
+                <button 
+                  className="btn btn-primary" style={{ flex: 1 }}
+                  onClick={() => {
+                    updateJobStatus(selectedApplicant.jobId, 'open');
+                    showToast(`You hired ${selectedApplicant.worker.name}! They will see it in their dashboard.`);
+                    setSelectedApplicant(null);
+                  }}
+                >
+                  <CheckCircle size={16}/> Hire {selectedApplicant.worker.name.split(' ')[0]}
+                </button>
+                <button 
+                  className="btn btn-secondary" style={{ flex: 1 }}
+                  onClick={() => {
+                    updateJobStatus(selectedApplicant.jobId, 'rejected');
+                    setSelectedApplicant(null);
+                  }}
+                >
+                  Decline
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

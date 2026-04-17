@@ -76,6 +76,23 @@ export default function WorkerCard({ worker, onHire, onReview, showActions = fal
         {worker.jobType?.includes('business') && <span className="badge badge-primary">🏢 Business</span>}
       </div>
 
+      {/* Work Photos (Portfolio) */}
+      {worker.portfolio && worker.portfolio.length > 0 && (
+        <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
+          <p style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px' }}>Recent Work</p>
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+            {worker.portfolio.map((imgUrl, idx) => (
+              <img 
+                key={idx} 
+                src={imgUrl} 
+                alt="Work sample" 
+                style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '8px', flexShrink: 0, border: '1px solid var(--border)' }} 
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Actions */}
       <div className="wc-actions">
         <Link to={`/worker/${worker.id}`} className="btn btn-secondary btn-sm" id={`view-profile-${worker.id}`}>

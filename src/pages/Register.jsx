@@ -141,12 +141,22 @@ CRITICAL RULES:
   "spoken_response": "string"
 }`;
 
-    const API_URL = import.meta.env.VITE_API_BASE_URL || (window.location.hostname === 'localhost' ? 'http://localhost:3001' : '');
+    const API_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
+    const apiKey = import.meta.env.VITE_NVIDIA_API_KEY;
+
     try {
-      const res = await fetch(`${API_URL}/api/chat`, {
+      const res = await fetch(API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: [{ role: 'system', content: systemPrompt }] })
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({ 
+          model: "meta/llama-3.1-8b-instruct",
+          messages: [{ role: 'system', content: systemPrompt }],
+          max_tokens: 500,
+          temperature: 0.7
+        })
       });
       const data = await res.json();
       let rawText = data.choices[0].message.content || '{}';

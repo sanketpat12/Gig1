@@ -3,8 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import { Bot, X, Send, User, ChevronUp, ChevronDown, Sparkles, Mic, MicOff } from 'lucide-react';
 import './AIAssistant.css';
 
-// Pointing to proxy server instead of direct NVIDIA endpoint to hide the key
-const API_URL = "http://localhost:3001/api/chat";
+// Pointing directly to NVIDIA endpoint to support static serverless hosting
+const API_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
 
 export default function AIAssistant() {
   const { currentUser } = useAuth();
@@ -59,13 +59,19 @@ Be concise, friendly, and practical. Format your answers smoothly (avoid overly 
         ...newMessages.map(m => ({ role: m.role, content: m.content }))
       ];
 
+      const apiKey = import.meta.env.VITE_NVIDIA_API_KEY;
+
       const res = await fetch(API_URL, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          messages: apiMessages
+          model: "meta/llama-3.1-8b-instruct",
+          messages: apiMessages,
+          max_tokens: 500,
+          temperature: 0.7
         })
       });
 

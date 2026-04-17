@@ -1,0 +1,95 @@
+.emp-page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-height: calc(100vh - 64px);
+}
+.emp-hero { text-align: center; padding: 20px 0; }
+.emp-welcome { font-size: 2rem; font-weight: 800; color: var(--text-primary); margin-bottom: 8px; }
+.emp-sub { font-size: 1rem; color: var(--text-secondary); }
+
+/* Work type selector */
+.worktype-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  max-width: 700px;
+  margin: 0 auto;
+  width: 100%;
+}
+.worktype-card {
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: left;
+  cursor: pointer;
+  border: none;
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  transition: transform 0.25s, box-shadow 0.25s;
+}
+.worktype-card:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-glow);
+}
+.worktype-icon {
+  width: 52px; height: 52px;
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+}
+.worktype-label { font-size: 1.25rem; font-weight: 800; color: var(--text-primary); }
+.worktype-desc { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; }
+.worktype-cta { font-size: 0.85rem; font-weight: 600; }
+
+/* Toolbar */
+.emp-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.emp-toolbar-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.worker-count { font-size: 0.83rem; color: var(--text-muted); }
+.filter-active { border-color: rgba(41,98,255,0.5) !important; color: var(--primary-dark) !important; }
+.filter-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--primary);
+  display: inline-block;
+  margin-left: 2px;
+}
+
+/* Filter panel */
+.filter-panel { padding: 20px 24px; }
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-end;
+}
+
+/* Workers grid */
+.workers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+/* Empty state */
+.empty-state {
+  padding: 64px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+@media (max-width: 640px) {
+  .worktype-grid { grid-template-columns: 1fr; max-width: 400px; }
+  .emp-toolbar { flex-direction: column; align-items: flex-start; }
+}

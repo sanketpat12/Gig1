@@ -1,0 +1,87 @@
+.wp-page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 28px 24px 60px;
+}
+.wp-back { margin-bottom: 20px; }
+.wp-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+.wp-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: sticky;
+  top: 80px;
+}
+.wp-identity {
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+}
+.wp-avatar-wrap { position: relative; }
+.wp-avatar { box-shadow: 0 0 20px rgba(18,184,134,0.1); }
+.avail-badge {
+  position: absolute;
+  bottom: 2px;
+  right: -4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.avail-yes { background: rgba(67,233,123,0.15); color: #43e97b; border: 1px solid rgba(67,233,123,0.35); }
+.avail-no  { background: rgba(255,101,132,0.15); color: #ff6584; border: 1px solid rgba(255,101,132,0.35); }
+.wp-name { font-size: 1.4rem; font-weight: 800; color: var(--text-primary); }
+.wp-location { display: flex; align-items: center; gap: 5px; font-size: 0.82rem; color: var(--text-secondary); }
+.wp-rating-summary { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.big-rating { font-size: 2.5rem; font-weight: 900; color: #ffd200; line-height: 1; }
+.wp-rate { font-size: 1.1rem; font-weight: 800; color: #43e97b; }
+
+.wp-quick-stats {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.qstat { display: flex; align-items: center; gap: 12px; }
+.qstat-val { font-size: 1rem; font-weight: 700; color: var(--text-primary); }
+.qstat-label { font-size: 0.75rem; color: var(--text-muted); }
+
+.wp-main { display: flex; flex-direction: column; gap: 20px; }
+.wp-section { padding: 24px; }
+.wp-section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Review items */
+.review-item {
+  padding: 18px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transition: background 0.2s;
+}
+.review-item:hover { background: var(--bg-card); }
+.review-header { display: flex; align-items: flex-start; gap: 12px; }
+
+@media (max-width: 900px) {
+  .wp-layout { grid-template-columns: 1fr; }
+  .wp-sidebar { position: static; }
+}
+@media (max-width: 480px) {
+  .wp-identity { padding: 24px 16px; }
+  .wp-section { padding: 18px 16px; }
+}

@@ -1,0 +1,101 @@
+import { Link, useNavigate } from 'react-router-dom';
+import { MapPin, Star, Briefcase, Clock, ChevronRight } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import StarRating from './StarRating';
+import './WorkerCard.css';
+
+export default function WorkerCard({ worker, onHire, onReview, showActions = false }) {
+  const { getAvgRating, getReviewsForWorker, jobs, currentUser } = useAuth();
+  const navigate = useNavigate();
+  const avg = getAvgRating(worker.id);
+  const reviewCount = getReviewsForWorker(worker.id).length;
+
+  const hasHired = jobs?.some(j => j.employerId === currentUser?.id && j.workerId === worker.id);
+
+  const handleCardClick = (e) => {
+    if (e.target.closest('button') || e.target.closest('a')) return;
+    navigate(`/worker/${worker.id}`);
+  };
+
+  const initials = worker.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  const avatarGrad = worker.role === 'worker'
+    ? 'linear-gradient(135deg, #12b886, #38f9d7)'
+    : 'linear-gradient(135deg, var(--primary), var(--primary-dark))';
+
+  return (
+    <div className="worker-card glass-card animate-fadeInUp" onClick={handleCardClick} style={{ cursor: 'pointer' }}>
+      {/* Header */}
+      <div className="wc-header">
+        <div className="avatar avatar-lg" style={{ background: avatarGrad }}>
+          {initials}
+        </div>
+        <div className="wc-info">
+          <h3 className="wc-name">{worker.name}</h3>
+          <div className="wc-location">
+            <MapPin size={13} /> {worker.locality}, {worker.city}
+          </div>
+          <div className="wc-rating">
+            <StarRating value={Math.round(avg)} readonly size={14} />
+            <span className="rating-num">{avg > 0 ? avg : 'No rating'}</span>
+            <span className="rating-count">({reviewCount} review{reviewCount !== 1 ? 's' : ''})</span>
+          </div>
+        </div>
+        <div className={`avail-dot ${worker.availability === 'available' ? 'avail-yes' : 'avail-no'}`}
+          title={worker.availability === 'available' ? 'Available' : 'Busy'} />
+      </div>
+
+      {/* Bio */}
+      {worker.bio && <p className="wc-bio">{worker.bio}</p>}
+
+      {/* Skills */}
+      <div className="wc-skills">
+        {worker.skills?.slice(0, 4).map(skill => (
+          <span key={skill} className="tag">{skill}</span>
+        ))}
+        {worker.skills?.length > 4 && <span className="tag">+{worker.skills.length - 4}</span>}
+      </div>
+
+      {/* Stats */}
+      <div className="wc-stats">
+        <div className="wc-stat">
+          <Briefcase size={13} />
+          <span>{worker.jobsDone || 0} jobs done</span>
+        </div>
+        <div className="wc-stat">
+          <Clock size={13} />
+          <span>{worker.experience || 'N/A'} exp.</span>
+        </div>
+        <div className="wc-stat">
+          <span className="rate">₹{worker.hourlyRate || '—'}/hr</span>
+        </div>
+      </div>
+
+      {/* Job Types */}
+      <div className="wc-jobtypes">
+        {worker.jobType?.includes('home') && <span className="badge badge-success">🏠 Home</span>}
+        {worker.jobType?.includes('business') && <span className="badge badge-primary">🏢 Business</span>}
+      </div>
+
+      {/* Actions */}
+      <div className="wc-actions">
+        <Link to={`/worker/${worker.id}`} className="btn btn-secondary btn-sm" id={`view-profile-${worker.id}`}>
+          View Profile <ChevronRight size={14} />
+        </Link>
+        {showActions && (
+          <>
+            {onHire && worker.availability === 'available' && (
+              <button id={`hire-btn-${worker.id}`} className="btn btn-primary btn-sm" onClick={() => onHire(worker)}>
+                Hire Now
+              </button>
+            )}
+            {onReview && hasHired && (
+              <button id={`review-btn-${worker.id}`} className="btn btn-warning btn-sm" onClick={() => onReview(worker)}>
+                <Star size={13} /> Review
+              </button>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}

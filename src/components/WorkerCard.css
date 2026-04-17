@@ -1,0 +1,56 @@
+.worker-card {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: transform 0.25s, box-shadow 0.25s;
+}
+.worker-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 0 1px rgba(108,99,255,0.2);
+}
+.wc-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  position: relative;
+}
+.wc-info { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.wc-name { font-size: 1rem; font-weight: 700; color: var(--text-primary); }
+.wc-location {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 0.78rem; color: rgba(240,240,255,0.55);
+}
+.wc-rating { display: flex; align-items: center; gap: 6px; }
+.rating-num { font-size: 0.82rem; font-weight: 700; color: #ffd200; }
+.rating-count { font-size: 0.75rem; color: rgba(240,240,255,0.4); }
+.avail-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  position: absolute; top: 0; right: 0;
+  box-shadow: 0 0 8px currentColor;
+}
+.avail-yes { background: #43e97b; color: #43e97b; }
+.avail-no  { background: #ff6584; color: #ff6584; }
+.wc-bio {
+  font-size: 0.83rem;
+  color: rgba(240,240,255,0.55);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.wc-skills { display: flex; flex-wrap: wrap; gap: 6px; }
+.wc-stats {
+  display: flex; align-items: center; gap: 14px;
+  flex-wrap: wrap;
+}
+.wc-stat {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 0.78rem; color: rgba(240,240,255,0.5);
+}
+.rate { font-weight: 700; color: #43e97b; font-size: 0.88rem; }
+.wc-jobtypes { display: flex; gap: 6px; flex-wrap: wrap; }
+.wc-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 2px; }

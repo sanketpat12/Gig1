@@ -1,0 +1,571 @@
+/* Import shared auth styles for skill tags / role-btns */
+@import url('./Auth.css');
+
+/* ─── Page shell ────────────────────────────────────── */
+.wd-page {
+  width: 100%;
+  min-height: calc(100vh - 64px);
+  padding-bottom: 32px;
+}
+
+.wd-layout {
+  width: min(1360px, 100%);
+  margin: 0 auto;
+  padding: clamp(20px, 3vw, 36px) clamp(16px, 3vw, 32px);
+  display: grid;
+  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+/* ─── Sidebar ────────────────────────────────────────── */
+.wd-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: sticky;
+  top: 80px;
+}
+
+.wd-profile-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 28px 20px;
+}
+
+.wd-avatar-wrap {
+  position: relative;
+  width: fit-content;
+}
+
+.wd-avatar {
+  background: linear-gradient(135deg, var(--success), #00e676) !important;
+  font-size: 2rem;
+}
+
+.wd-avail-dot {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-card);
+}
+.dot-green { background: var(--success); }
+.dot-red   { background: var(--danger); }
+
+.wd-name {
+  font-size: 1.15rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.wd-location {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.wd-rating-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wd-rating-num {
+  color: var(--warning);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.wd-review-count {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.wd-rate-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(18,184,134,0.1);
+  border: 1px solid rgba(18,184,134,0.2);
+  color: var(--success);
+  padding: 5px 14px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.wd-job-types {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.wd-avail-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  border: 1px solid transparent;
+}
+
+.avail-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.avail-on {
+  background: rgba(18,184,134,0.08);
+  color: var(--success);
+  border-color: rgba(18,184,134,0.15);
+}
+.avail-on .avail-indicator { background: var(--success); }
+
+.avail-off {
+  background: rgba(250,82,82,0.08);
+  color: var(--danger);
+  border-color: rgba(250,82,82,0.15);
+}
+.avail-off .avail-indicator { background: var(--danger); }
+
+/* ─── Stats card ─────────────────────────────────────── */
+.wd-stats-card {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  padding: 16px;
+}
+
+.wd-stat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.6);
+}
+
+.wd-stat-icon { flex-shrink: 0; }
+.icon-blue   { color: var(--primary); }
+.icon-yellow { color: var(--warning); }
+.icon-green  { color: var(--success); }
+.icon-purple { color: #7c3aed; }
+
+.wd-stat-val {
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--text-primary);
+}
+.wd-stat-label {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ─── Profile strength bar ───────────────────────────── */
+.wd-progress-wrap {
+  height: 8px;
+  background: rgba(0,0,0,0.06);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.wd-progress-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ─── Mobile tab bar ─────────────────────────────────── */
+.wd-tab-bar {
+  display: none;
+  position: sticky;
+  top: 64px;
+  z-index: 50;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  padding: 0 4px;
+  gap: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.wd-tab-bar::-webkit-scrollbar { display: none; }
+
+.wd-tab-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 10px 14px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+}
+.wd-tab-active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+/* ─── Desktop tabs ───────────────────────────────────── */
+.wd-desktop-tabs {
+  display: flex;
+  padding: 6px;
+  gap: 4px;
+  border-radius: 18px;
+  margin-bottom: 20px;
+}
+
+.wd-dtab-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  border-radius: 12px;
+  border: none;
+  background: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.wd-dtab-btn:hover { color: var(--primary); background: rgba(41,98,255,0.05); }
+.wd-dtab-active {
+  background: var(--primary) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 14px rgba(41,98,255,0.3);
+}
+
+/* ─── Main content area ──────────────────────────────── */
+.wd-main { display: flex; flex-direction: column; min-width: 0; }
+
+.wd-tab-content {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  animation: fadeInUp 0.35s ease both;
+}
+
+.wd-section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ─── Welcome banner ─────────────────────────────────── */
+.wd-welcome-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  background: linear-gradient(135deg, rgba(41,98,255,0.04), rgba(18,184,134,0.04));
+  border: 1px solid rgba(41,98,255,0.1);
+}
+
+.wd-score-circle {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  border: 3px solid rgba(41,98,255,0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(255,255,255,0.7);
+}
+
+/* ─── Quick stats row ────────────────────────────────── */
+.wd-quick-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.wd-quick-stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 16px;
+  border-radius: 20px;
+}
+
+.wd-qs-val {
+  font-size: 1.5rem;
+  font-weight: 900;
+  line-height: 1;
+}
+.wd-qs-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ─── Empty prompt ───────────────────────────────────── */
+.wd-empty-prompt {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  transition: var(--transition);
+  border: 2px dashed var(--border);
+  background: transparent;
+}
+.wd-empty-prompt:hover {
+  border-color: var(--primary);
+  background: rgba(41,98,255,0.02);
+  transform: translateY(-2px);
+}
+
+/* ─── Reviews ────────────────────────────────────────── */
+.wd-empty-reviews {
+  text-align: center;
+  padding: 32px;
+}
+.wd-review-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(0,0,0,0.02);
+  border: 1px solid var(--border);
+}
+.wd-review-avatar {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark)) !important;
+  font-size: 0.75rem !important;
+  flex-shrink: 0;
+}
+
+/* ─── Jobs tab ───────────────────────────────────────── */
+.wd-jobs-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 48px 24px;
+}
+
+.wd-jobs-section-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.wd-jobs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wd-job-card {
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+}
+.wd-job-pending { background: rgba(41,98,255,0.03); border-color: rgba(41,98,255,0.1); }
+.wd-job-done    { background: rgba(18,184,134,0.03); border-color: rgba(18,184,134,0.1); }
+
+.wd-job-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ─── Find Jobs tab ──────────────────────────────────── */
+.wd-job-search-bar {
+  display: flex;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 16px;
+}
+
+.wd-search-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+.wd-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.88rem;
+  background: none;
+  color: var(--text-primary);
+}
+.wd-search-input::placeholder { color: var(--text-muted); }
+
+.wd-open-jobs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.wd-open-job-card {
+  transition: var(--transition);
+  border-radius: 18px;
+  animation: fadeInUp 0.4s ease both;
+}
+.wd-open-job-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 36px rgba(41,98,255,0.1);
+}
+
+.wd-open-job-meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 0.77rem;
+  color: var(--text-secondary);
+}
+.wd-open-job-meta span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ─── Earnings tab ───────────────────────────────────── */
+.wd-earnings-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.wd-earn-card {
+  padding: 22px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-radius: 20px;
+}
+.wd-earn-label { font-size: 0.78rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.wd-earn-val   { font-size: 1.6rem; font-weight: 900; }
+
+.wd-rate-prompt {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  background: rgba(245,159,0,0.06);
+  border: 1px solid rgba(245,159,0,0.2);
+}
+
+.wd-earnings-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.wd-et-header, .wd-et-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: 16px;
+  padding: 12px 16px;
+  align-items: center;
+}
+.wd-et-header {
+  background: rgba(0,0,0,0.03);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.wd-et-row { border-top: 1px solid var(--border); }
+.wd-et-row:hover { background: rgba(41,98,255,0.02); }
+
+/* ─── Profile tab ────────────────────────────────────── */
+.wd-profile-val {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  padding: 12px 16px;
+  background: #f4f6fa;
+  border-radius: 14px;
+  border: 1px solid transparent;
+}
+
+/* ─── Responsive ─────────────────────────────────────── */
+@media (max-width: 1200px) {
+  .wd-quick-stats-row { grid-template-columns: repeat(2, 1fr); }
+  .wd-earnings-grid   { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 1024px) {
+  .wd-layout {
+    grid-template-columns: 260px minmax(0, 1fr);
+    gap: 16px;
+    padding: 20px 16px;
+  }
+}
+
+@media (max-width: 860px) {
+  .wd-layout {
+    grid-template-columns: 1fr;
+    padding: 12px 12px 80px;
+  }
+
+  .wd-sidebar {
+    position: static;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .wd-profile-card { grid-column: span 2; }
+
+  .wd-tab-bar { display: flex; }
+  .wd-desktop-tabs { display: none; }
+
+  .wd-quick-stats-row { grid-template-columns: repeat(2, 1fr); }
+  .wd-earnings-grid   { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 600px) {
+  .wd-sidebar { grid-template-columns: 1fr; }
+  .wd-profile-card { grid-column: span 1; }
+  .wd-quick-stats-row { grid-template-columns: 1fr 1fr; }
+  .wd-earnings-grid   { grid-template-columns: 1fr; }
+  .wd-open-jobs-grid  { grid-template-columns: 1fr; }
+  .wd-job-search-bar  { flex-direction: column; gap: 8px; }
+  .wd-et-header, .wd-et-row { grid-template-columns: 1fr auto auto; }
+}

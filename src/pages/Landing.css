@@ -1,0 +1,152 @@
+.landing { min-height: 100vh; }
+
+/* Hero */
+.hero {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 60px 24px 40px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  align-items: center;
+}
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--primary-light);
+  border: 1px solid rgba(41,98,255,0.1);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  color: var(--primary-dark);
+  font-weight: 500;
+  margin-bottom: 20px;
+}
+.hero-title {
+  font-size: clamp(2rem,4vw,3.2rem);
+  font-weight: 900;
+  line-height: 1.15;
+  margin-bottom: 20px;
+  color: var(--text-primary);
+}
+.gradient-text {
+  color: var(--primary);
+}
+.hero-sub {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin-bottom: 32px;
+  max-width: 480px;
+}
+.hero-btns { display: flex; gap: 12px; flex-wrap: wrap; }
+.hero-visual { display: flex; justify-content: center; }
+.hero-card {
+  width: 100%;
+  max-width: 340px;
+  padding: 22px;
+  box-shadow: 0 24px 60px rgba(41,98,255,0.08), 0 0 0 1px rgba(0,0,0,0.03);
+}
+
+/* Stats */
+.stats-section {
+  padding: 24px 24px;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+  gap: 16px;
+}
+.stat-item {
+  padding: 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.stat-val { font-size: 1.8rem; font-weight: 900; color: var(--primary); }
+.stat-label { font-size: 0.8rem; color: var(--text-secondary); }
+
+/* Section */
+.section { padding: 48px 24px; }
+.section-inner { max-width: 1280px; margin: 0 auto; }
+.section-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 36px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.section-title { font-size: clamp(1.4rem,3vw,2rem); font-weight: 800; color: var(--text-primary); }
+.section-sub { font-size: 0.9rem; color: var(--text-secondary); margin-top: 4px; }
+
+/* Steps */
+.steps-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; }
+.step-card { padding: 28px; }
+.step-num { font-size: 2.5rem; font-weight: 900; color: var(--primary); margin-bottom: 12px; }
+.step-title { font-size: 1rem; font-weight: 700; margin-bottom: 8px; color: var(--text-primary); }
+.step-desc { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; }
+
+/* Features */
+.features-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 20px; }
+.feature-card { padding: 26px; }
+.feature-icon {
+  width: 44px; height: 44px;
+  background: var(--primary-light);
+  border: 1px solid rgba(41,98,255,0.1);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--primary-dark);
+  margin-bottom: 14px;
+}
+.feature-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; color: var(--text-primary); }
+.feature-desc { font-size: 0.82rem; color: var(--text-secondary); line-height: 1.6; }
+
+/* Featured workers */
+.featured-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; }
+.mini-worker-card { padding: 20px; }
+
+/* CTA */
+.cta-section { padding: 48px 24px; }
+.cta-inner {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 48px 40px;
+  text-align: center;
+  background: var(--bg-card-hover);
+  border: 1px solid var(--border);
+}
+.cta-title { font-size: 2rem; font-weight: 800; margin-bottom: 12px; }
+.cta-sub { color: var(--text-secondary); margin-bottom: 28px; }
+
+/* Footer */
+.footer { padding: 32px 24px; border-top: 1px solid var(--border); }
+.footer-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .features-grid { grid-template-columns: repeat(2,1fr); }
+  .stats-grid { grid-template-columns: repeat(2,1fr); }
+}
+@media (max-width: 768px) {
+  .hero { grid-template-columns: 1fr; gap: 40px; padding: 48px 20px 40px; text-align: center; }
+  .hero-sub { max-width: 100%; }
+  .hero-btns { justify-content: center; }
+  .hero-visual { display: none; }
+  .steps-grid { grid-template-columns: 1fr; }
+  .features-grid { grid-template-columns: 1fr; }
+  .featured-grid { grid-template-columns: 1fr; }
+  .stats-grid { grid-template-columns: repeat(2,1fr); }
+  .section-header { flex-direction: column; align-items: flex-start; }
+}

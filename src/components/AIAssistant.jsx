@@ -77,7 +77,14 @@ Be concise, friendly, and practical. Format your answers smoothly (avoid overly 
         throw new Error('Failed to fetch from API');
       }
 
-      const data = await res.json();
+      const rawText = await res.text();
+      let data;
+      try {
+        data = JSON.parse(rawText);
+      } catch (e) {
+        throw new Error(`Parse failed. Status ${res.status}. Raw body: '${rawText.substring(0, 30)}'`);
+      }
+
       const reply = data.choices && data.choices[0] && data.choices[0].message.content;
 
       if (reply) {

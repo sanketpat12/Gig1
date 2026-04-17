@@ -59,19 +59,17 @@ Be concise, friendly, and practical. Format your answers smoothly (avoid overly 
         ...newMessages.map(m => ({ role: m.role, content: m.content }))
       ];
 
-      const apiKey = import.meta.env.VITE_NVIDIA_API_KEY;
+      const API_URL = import.meta.env.VITE_API_BASE_URL 
+        ? `${import.meta.env.VITE_API_BASE_URL}/api/chat` 
+        : (window.location.hostname === 'localhost' ? 'http://localhost:3001/api/chat' : '/api/chat');
 
       const res = await fetch(API_URL, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: "meta/llama-3.1-8b-instruct",
-          messages: apiMessages,
-          max_tokens: 500,
-          temperature: 0.7
+          messages: apiMessages
         })
       });
 

@@ -77,21 +77,18 @@ CRITICAL RULES:
   "spoken_response": "string"
 }`;
 
-    const API_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
-    const apiKey = import.meta.env.VITE_NVIDIA_API_KEY;
+    const API_URL = import.meta.env.VITE_API_BASE_URL 
+      ? `${import.meta.env.VITE_API_BASE_URL}/api/chat` 
+      : (window.location.hostname === 'localhost' ? 'http://localhost:3001/api/chat' : '/api/chat');
 
     try {
       const res = await fetch(API_URL, {
         method: 'POST',
         headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: "meta/llama-3.1-8b-instruct",
-          messages: [{ role: 'system', content: systemPrompt }],
-          max_tokens: 500,
-          temperature: 0.7
+          messages: [{ role: 'system', content: systemPrompt }]
         })
       });
 

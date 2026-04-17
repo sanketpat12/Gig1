@@ -38,6 +38,7 @@ CREATE TABLE public.jobs (
     "employerName" text,
     "workerName" text,
     status text DEFAULT 'open',
+    "verifyCode" text,
     "createdAt" text NOT NULL
 );
 

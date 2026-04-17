@@ -194,7 +194,7 @@ function FindJobsTab({ openJobs, appliedJobs, setAppliedJobs, showToast, applyFo
 
 // ── Main Worker Dashboard component ──────────────────────────────────────────
 export default function WorkerDashboard() {
-  const { currentUser, updateUser, getReviewsForWorker, getAvgRating, jobs, releasedJobs, applyForJob, updateJobStatus } = useAuth();
+  const { currentUser, updateUser, getReviewsForWorker, getAvgRating, jobs, releasedJobs, applyForJob, updateJobStatus, acceptJob } = useAuth();
 
   const [activeTab,    setActiveTab]    = useState('overview');
   const [toast,        setToast]        = useState(null);
@@ -208,6 +208,8 @@ export default function WorkerDashboard() {
   const myJobs       = (jobs || []).filter(j => j.workerId === currentUser.id);
   const completedJobs = myJobs.filter(j => j.status === 'completed');
   const pendingJobs  = myJobs.filter(j => j.status === 'open');
+  const acceptedJobs = myJobs.filter(j => j.status?.startsWith('accepted_'));
+  const verifiedJobs = myJobs.filter(j => j.status === 'verified');
 
   const completionScore = useMemo(() => {
     let s = 0;
@@ -484,7 +486,7 @@ export default function WorkerDashboard() {
           {pendingJobs.length > 0 && (
             <div className="glass-card">
               <h3 className="wd-jobs-section-title" style={{ color:'var(--primary)' }}>
-                <Zap size={15}/> Incoming Requests ({pendingJobs.length})
+                <Zap size={15}/> Incoming Hire Requests ({pendingJobs.length})
               </h3>
               <div className="wd-jobs-list">
                 {pendingJobs.map(j => (
@@ -503,13 +505,75 @@ export default function WorkerDashboard() {
                     </div>
                     <div style={{ display:'flex', gap:'8px', marginTop:'10px' }}>
                       <button className="btn btn-success btn-sm" style={{ flex:1 }}
-                        onClick={() => { updateJobStatus(j.id,'completed'); showToast('Job accepted & marked complete!'); }}>
-                        <CheckCircle size={13}/> Accept & Complete
+                        onClick={async () => {
+                          const code = await acceptJob(j.id);
+                          showToast(`Accepted! Your verification code is: ${code}`);
+                        }}>
+                        <CheckCircle size={13}/> Accept
                       </button>
                       <button className="btn btn-danger btn-sm" style={{ flex:1 }}
                         onClick={() => { updateJobStatus(j.id,'rejected'); showToast('Job declined.','error'); }}>
                         <X size={13}/> Decline
                       </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Accepted Jobs – show verification code */}
+          {acceptedJobs.length > 0 && (
+            <div className="glass-card">
+              <h3 className="wd-jobs-section-title" style={{ color:'#7c3aed' }}>
+                <CheckCircle size={15}/> Accepted – Show Code to Employer ({acceptedJobs.length})
+              </h3>
+              <div className="wd-jobs-list">
+                {acceptedJobs.map(j => {
+                  const code = j.status?.startsWith('accepted_') ? j.status.split('_')[1] : j.verifyCode;
+                  return (
+                    <div key={j.id} className="wd-job-card" style={{ borderLeft:'4px solid #7c3aed' }}>
+                      <div className="wd-job-info">
+                        <div className="avatar avatar-sm" style={{ background:'linear-gradient(135deg,#7c3aed,#a78bfa)' }}>
+                          {j.employerName?.[0]?.toUpperCase()}
+                        </div>
+                        <div>
+                          <p style={{ fontWeight:700, fontSize:'0.9rem' }}>{j.employerName}</p>
+                          <p style={{ fontSize:'0.75rem', color:'var(--text-muted)' }}>Tell this code to your employer for attendance</p>
+                        </div>
+                      </div>
+                      <div style={{ marginTop:'12px', textAlign:'center', padding:'16px', background:'linear-gradient(135deg,rgba(124,58,237,0.08),rgba(167,139,250,0.08))', borderRadius:'12px' }}>
+                        <p style={{ fontSize:'0.75rem', color:'var(--text-muted)', marginBottom:'6px', textTransform:'uppercase', letterSpacing:'1px', fontWeight:600 }}>Your Verification Code</p>
+                        <p style={{ fontSize:'2rem', fontWeight:900, color:'#7c3aed', letterSpacing:'8px', fontFamily:'monospace' }}>{code}</p>
+                        <p style={{ fontSize:'0.7rem', color:'var(--text-muted)', marginTop:'8px' }}>⚠️ Do not share this until you reach the work location</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Verified (attendance marked) */}
+          {verifiedJobs.length > 0 && (
+            <div className="glass-card">
+              <h3 className="wd-jobs-section-title" style={{ color:'var(--success)' }}>
+                <CheckCircle size={15}/> Attendance Verified ({verifiedJobs.length})
+              </h3>
+              <div className="wd-jobs-list">
+                {verifiedJobs.map(j => (
+                  <div key={j.id} className="wd-job-card wd-job-done">
+                    <div className="wd-job-info">
+                      <div className="avatar avatar-sm" style={{ background:'linear-gradient(135deg,#43e97b,#12b886)' }}>
+                        {j.employerName?.[0]?.toUpperCase()}
+                      </div>
+                      <div>
+                        <p style={{ fontWeight:700, fontSize:'0.9rem' }}>{j.employerName}</p>
+                        <p style={{ fontSize:'0.75rem', color:'var(--text-muted)' }}>
+                          {new Date(j.createdAt).toLocaleDateString('en-IN', { day:'numeric', month:'short' })}
+                        </p>
+                      </div>
+                      <span className="badge badge-success" style={{ marginLeft:'auto' }}>✅ Attendance Marked</span>
                     </div>
                   </div>
                 ))}

@@ -391,21 +391,50 @@
 /* ─── Reviews ────────────────────────────────────────── */
 .wd-empty-reviews {
   text-align: center;
-  padding: 32px;
+  padding: 40px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
 }
+
 .wd-review-item {
   display: flex;
-  gap: 12px;
-  padding: 12px;
-  border-radius: 12px;
-  background: rgba(0,0,0,0.02);
-  border: 1px solid var(--border);
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(248,250,255,0.9));
+  border: 1px solid rgba(41,98,255,0.08);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  transition: all 0.25s ease;
+  animation: fadeInUp 0.3s ease both;
+}
+.wd-review-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(41,98,255,0.08);
+  border-color: rgba(41,98,255,0.15);
 }
 .wd-review-avatar {
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark)) !important;
-  font-size: 0.75rem !important;
+  background: linear-gradient(135deg, var(--primary), #7c3aed) !important;
+  font-size: 0.85rem !important;
+  font-weight: 800 !important;
   flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(41,98,255,0.25);
 }
+.wd-review-stars {
+  display: flex;
+  gap: 2px;
+  margin-top: 4px;
+}
+.wd-review-comment {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(0,0,0,0.04);
+}
+
 
 /* ─── Jobs tab ───────────────────────────────────────── */
 .wd-jobs-empty {

@@ -1,0 +1,71 @@
+.google-translate-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 36px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--border);
+  transition: all 0.2s ease;
+}
+
+.google-translate-wrapper:hover {
+  background: #ffffff;
+  border-color: rgba(41, 98, 255, 0.4);
+  box-shadow: 0 4px 12px rgba(41, 98, 255, 0.08);
+}
+
+/* Style the Google Translate dropdown */
+.goog-te-gadget-simple {
+  background-color: transparent !important;
+  border: none !important;
+  padding: 4px 10px !important;
+  border-radius: 999px !important;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 0.85rem !important;
+  font-weight: 600 !important;
+  display: flex !important;
+  align-items: center !important;
+  cursor: pointer !important;
+}
+
+.goog-te-gadget-simple .goog-te-menu-value {
+  color: var(--text-primary) !important;
+  display: flex !important;
+  align-items: center !important;
+  margin: 0 !important;
+}
+
+/* Hide the Google logo and extra text inside the box */
+.goog-te-gadget-icon {
+  display: none !important;
+}
+.goog-te-menu-value span:nth-child(3),
+.goog-te-menu-value span:nth-child(5) {
+  display: none !important;
+}
+
+/* Add custom down arrow */
+.goog-te-menu-value span:first-child::after {
+  content: '▼';
+  font-size: 0.6rem;
+  margin-left: 6px;
+  opacity: 0.6;
+}
+
+/* Global Google Translate Overrides - Hide banners and popups */
+body {
+  top: 0 !important;
+}
+.skiptranslate iframe {
+  display: none !important;
+}
+#goog-gt-tt {
+  display: none !important;
+  visibility: hidden !important;
+}
+.goog-text-highlight {
+  background-color: transparent !important;
+  box-shadow: none !important;
+}

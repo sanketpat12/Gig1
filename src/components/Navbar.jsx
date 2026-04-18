@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Briefcase, LogOut, User, Home, Search, Menu, X } from 'lucide-react';
+import { Globe, Briefcase, LogOut, User, Home, Search, Menu, X } from 'lucide-react';
+import LanguageSwitcher from './LanguageSwitcher';
 import './Navbar.css';
 
 export default function Navbar() {
@@ -74,6 +75,8 @@ export default function Navbar() {
             </div>
           )}
         </div>
+
+        <LanguageSwitcher />
 
         {/* Mobile Menu Toggle */}
         <button className="menu-toggle" onClick={() => setMenuOpen(!menuOpen)}>

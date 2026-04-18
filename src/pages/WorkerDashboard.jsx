@@ -435,32 +435,54 @@ export default function WorkerDashboard() {
       )}
 
       {/* Recent reviews */}
-      <div className="glass-card">
-        <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'16px' }}>
-          <Star size={18} style={{ color:'var(--warning)' }}/>
-          <h3 style={{ fontWeight:700, fontSize:'0.95rem' }}>Recent Reviews</h3>
-          {avg > 0 && <span style={{ marginLeft:'auto', color:'var(--warning)', fontWeight:800 }}>★ {avg}</span>}
+      <div className="glass-card" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.97), rgba(248,250,255,0.9))' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'20px' }}>
+          <div style={{ background: 'linear-gradient(135deg, #f59e0b, #fbbf24)', padding:'8px', borderRadius:'12px', display:'flex', flexShrink:0 }}>
+            <Star size={16} style={{ color:'#fff' }}/>
+          </div>
+          <div style={{ flex:1 }}>
+            <h3 style={{ fontWeight:800, fontSize:'0.98rem', color:'var(--text-primary)' }}>Recent Reviews</h3>
+            <p style={{ fontSize:'0.72rem', color:'var(--text-muted)', marginTop:'1px' }}>{reviews.length} review{reviews.length !== 1 ? 's' : ''} received</p>
+          </div>
+          {avg > 0 && (
+            <div style={{ display:'flex', alignItems:'center', gap:'4px', background:'rgba(245,158,11,0.1)', border:'1px solid rgba(245,158,11,0.2)', borderRadius:'999px', padding:'4px 12px', flexShrink:0 }}>
+              <span style={{ color:'#f59e0b', fontWeight:900, fontSize:'0.9rem' }}>★ {avg}</span>
+            </div>
+          )}
         </div>
         {reviews.length === 0 ? (
           <div className="wd-empty-reviews">
-            <Star size={36} style={{ opacity:0.2, margin:'0 auto 10px' }}/>
-            <p style={{ color:'var(--text-muted)', fontSize:'0.85rem' }}>No reviews yet. Complete jobs to receive feedback.</p>
+            <div style={{ background:'rgba(245,158,11,0.1)', padding:'16px', borderRadius:'50%' }}>
+              <Star size={28} style={{ color:'#f59e0b', opacity:0.5 }}/>
+            </div>
+            <p style={{ color:'var(--text-secondary)', fontSize:'0.88rem', fontWeight:600 }}>No reviews yet</p>
+            <p style={{ color:'var(--text-muted)', fontSize:'0.8rem' }}>Complete jobs to receive feedback from employers.</p>
           </div>
         ) : (
-          <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
+          <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
             {reviews.slice(0,3).map(r => (
               <div key={r.id} className="wd-review-item">
                 <div className="avatar avatar-sm wd-review-avatar">{r.employerName?.[0]?.toUpperCase()}</div>
-                <div style={{ flex:1 }}>
-                  <div style={{ display:'flex', justifyContent:'space-between' }}>
-                    <p style={{ fontWeight:600, fontSize:'0.88rem' }}>{r.employerName}</p>
-                    <p style={{ fontSize:'0.72rem', color:'var(--text-muted)' }}>{r.date}</p>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:'8px', flexWrap:'wrap' }}>
+                    <p style={{ fontWeight:700, fontSize:'0.9rem', color:'var(--text-primary)' }}>{r.employerName}</p>
+                    <p style={{ fontSize:'0.72rem', color:'var(--text-muted)', flexShrink:0 }}>{r.date}</p>
                   </div>
-                  <StarRating value={r.rating} readonly size={13}/>
-                  <p style={{ fontSize:'0.84rem', color:'var(--text-secondary)', lineHeight:'1.6', marginTop:'5px' }}>{r.comment}</p>
+                  <div className="wd-review-stars">
+                    <StarRating value={r.rating} readonly size={14}/>
+                    <span style={{ fontSize:'0.75rem', color:'#f59e0b', fontWeight:700, marginLeft:'4px' }}>
+                      {['','Poor','Fair','Good','Very Good','Excellent'][r.rating]}
+                    </span>
+                  </div>
+                  <p className="wd-review-comment">{r.comment}</p>
                 </div>
               </div>
             ))}
+            {reviews.length > 3 && (
+              <button className="btn btn-secondary btn-sm" style={{ alignSelf:'center', marginTop:'4px' }} onClick={() => switchTab('profile')}>
+                View all {reviews.length} reviews →
+              </button>
+            )}
           </div>
         )}
       </div>

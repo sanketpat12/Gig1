@@ -10,7 +10,7 @@ const DEFAULT_WORKERS = [
     skills: ['Plumbing', 'Electrical', 'Carpentry'],
     bio: 'Expert plumber and electrician with 8 years of experience.',
     hourlyRate: 350, availability: 'available', avatar: null,
-    jobType: ['home', 'business'], experience: '8 years', jobsDone: 42,
+    jobType: ['home', 'home'], experience: '8 years', jobsDone: 42,
   },
   {
     id: 'w2', role: 'worker', name: 'Priya Sharma', email: 'priya@example.com', password: 'pass123',
@@ -26,15 +26,15 @@ const DEFAULT_WORKERS = [
     skills: ['Painting', 'Tiling', 'Masonry'],
     bio: 'Skilled mason and painter for home renovation projects.',
     hourlyRate: 400, availability: 'available', avatar: null,
-    jobType: ['home', 'business'], experience: '10 years', jobsDone: 89,
+    jobType: ['home', 'home'], experience: '10 years', jobsDone: 89,
   },
   {
     id: 'w4', role: 'worker', name: 'Kavita Raut', email: 'kavita@example.com', password: 'pass123',
     city: 'Pune', locality: 'Kothrud', phone: '9876512345',
     skills: ['Data Entry', 'Office Cleaning', 'Reception'],
-    bio: 'Office support specialist available for business or personal tasks.',
+    bio: 'Office support specialist available for home or personal tasks.',
     hourlyRate: 300, availability: 'busy', avatar: null,
-    jobType: ['business'], experience: '4 years', jobsDone: 31,
+    jobType: ['home'], experience: '4 years', jobsDone: 31,
   },
   {
     id: 'w5', role: 'worker', name: 'Amir Khan', email: 'amir@example.com', password: 'pass123',
@@ -42,7 +42,7 @@ const DEFAULT_WORKERS = [
     skills: ['Driving', 'Delivery', 'Logistics'],
     bio: 'Professional driver and delivery expert across Delhi NCR.',
     hourlyRate: 500, availability: 'available', avatar: null,
-    jobType: ['home', 'business'], experience: '6 years', jobsDone: 120,
+    jobType: ['home', 'home'], experience: '6 years', jobsDone: 120,
   },
 ];
 
@@ -77,7 +77,9 @@ const buildDbPayload = (userData) => ({
   jobType: userData.jobType || null,
   availability: userData.availability || 'available',
   jobsDone: userData.jobsDone || 0,
-  portfolio: userData.portfolio || null
+  portfolio: userData.portfolio || null,
+  dailyRate: userData.dailyRate || 0,
+  availableSlots: userData.availableSlots || null
 });
 
 export function AuthProvider({ children }) {
@@ -87,6 +89,7 @@ export function AuthProvider({ children }) {
   const [jobs, setJobs] = useState([]);
   const [releasedJobs, setReleasedJobs] = useState([]);
   const [hiringDetails, setHiringDetails] = useState([]);
+  const [schedules, setSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Load ALL data from Supabase on mount
@@ -95,12 +98,13 @@ export function AuthProvider({ children }) {
       try {
         const { data: { session } } = await supabase.auth.getSession();
 
-        const [{ data: dbUsers }, { data: dbReviews }, { data: dbJobs }, { data: dbHirings }, { data: dbReleasedJobs }] = await Promise.all([
+        const [{ data: dbUsers }, { data: dbReviews }, { data: dbJobs }, { data: dbHirings }, { data: dbReleasedJobs }, { data: dbSchedules }] = await Promise.all([
           supabase.from('users').select('*'),
           supabase.from('reviews').select('*'),
           supabase.from('jobs').select('*'),
           supabase.from('hiring_details').select('*'),
-          supabase.from('released_jobs').select('*')
+          supabase.from('released_jobs').select('*'),
+          supabase.from('schedules').select('*').catch(() => ({ data: [] }))
         ]);
 
         // Merge DB users with defaults (defaults act as demo/seed data)
@@ -118,6 +122,7 @@ export function AuthProvider({ children }) {
         if (dbJobs && dbJobs.length > 0) setJobs(dbJobs);
         if (dbHirings && dbHirings.length > 0) setHiringDetails(dbHirings);
         if (dbReleasedJobs && dbReleasedJobs.length > 0) setReleasedJobs(dbReleasedJobs);
+        if (dbSchedules && dbSchedules.length > 0) setSchedules(dbSchedules);
       } catch (err) {
         console.warn('Failed to load from Supabase:', err);
       } finally {
@@ -386,6 +391,19 @@ export function AuthProvider({ children }) {
     return list;
   };
 
+  // Refresh workers list from Supabase (so employer sees newly registered workers)
+  const refreshWorkers = async () => {
+    try {
+      const { data: dbUsers, error } = await supabase.from('users').select('*').eq('role', 'worker');
+      if (error || !dbUsers) return;
+      setUsers(prev => {
+        // Keep non-worker defaults + employer + current user, merge in fresh workers from DB
+        const nonWorkers = prev.filter(u => u.role !== 'worker');
+        return [...nonWorkers, ...dbUsers];
+      });
+    } catch (e) { console.warn('refreshWorkers failed', e); }
+  };
+
   const getWorkerById = (id) => users.find(u => u.id === id);
   const getUserById = (id) => users.find(u => u.id === id);
 
@@ -472,6 +490,28 @@ export function AuthProvider({ children }) {
     setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status, ...extra } : j));
   };
 
+  const deleteJob = async (jobId) => {
+    try {
+      await supabase.from('jobs').delete().eq('id', jobId);
+    } catch (e) { console.warn('Supabase error on deleteJob', e); }
+    setJobs(prev => prev.filter(j => j.id !== jobId));
+  };
+
+  const clearCompletedJobs = async (userId, role) => {
+    try {
+      const q = supabase.from('jobs').delete().eq('status', 'completed');
+      if (role === 'employer') q.eq('employerId', userId);
+      else q.eq('workerId', userId);
+      await q;
+    } catch (e) { console.warn('Supabase error on clearCompletedJobs', e); }
+    
+    setJobs(prev => prev.filter(j => {
+      if (j.status !== 'completed') return true;
+      if (role === 'employer') return j.employerId !== userId;
+      return j.workerId !== userId;
+    }));
+  };
+
   // Worker accepts a hire request → generates a consistent 4-digit code based on jobId
   const acceptJob = async (jobId) => {
     // Generate deterministic code based on numeric part of jobId so employer and worker ALWAYS calculate the same code
@@ -544,16 +584,53 @@ export function AuthProvider({ children }) {
   const getHiringDetailsForWorker = (workerId) => hiringDetails.filter(h => h.workerId === workerId);
   const getHiringDetailsForEmployer = (employerId) => hiringDetails.filter(h => h.employerId === employerId);
 
+  // ── Scheduling ─────────────────────────────────────────────────────────────
+  const createSchedule = async (scheduleData) => {
+    const newSchedule = {
+      ...scheduleData,
+      id: `sched_${Date.now()}`,
+      status: 'pending', // pending | confirmed | declined | cancelled
+      createdAt: new Date().toISOString(),
+    };
+    try {
+      await supabase.from('schedules').insert(newSchedule);
+    } catch (e) { console.warn('Supabase error on createSchedule', e); }
+    setSchedules(prev => [...prev, newSchedule]);
+    return newSchedule;
+  };
+
+  const updateScheduleStatus = async (scheduleId, status) => {
+    try {
+      await supabase.from('schedules').update({ status }).eq('id', scheduleId);
+    } catch (e) { console.warn('Supabase error on updateScheduleStatus', e); }
+    setSchedules(prev => prev.map(s => s.id === scheduleId ? { ...s, status } : s));
+  };
+
+  const getSchedulesForWorker = (workerId) => schedules.filter(s => s.workerId === workerId);
+  const getSchedulesForEmployer = (employerId) => schedules.filter(s => s.employerId === employerId);
+
+  // Update worker's available time slots on their profile
+  const updateAvailableSlots = async (slots) => {
+    const updated = { ...currentUser, availableSlots: slots };
+    try {
+      await supabase.from('users').update({ availableSlots: slots }).eq('id', currentUser.id);
+    } catch (e) { console.warn('Supabase error on updateAvailableSlots', e); }
+    setCurrentUser(updated);
+    setUsers(prev => prev.map(u => u.id === currentUser.id ? updated : u));
+  };
+
   return (
     <AuthContext.Provider value={{
       currentUser, users, reviews, jobs, releasedJobs, hiringDetails, loading,
       login, register, logout, updateUser,
-      getWorkers, getWorkerById, getUserById,
+      getWorkers, getWorkerById, getUserById, refreshWorkers,
       getReviewsForWorker, getAvgRating, addReview,
       postJob, releaseJob, removeReleasedJob, applyForJob, getJobsForEmployer, getJobsForWorker, updateJobStatus,
       acceptJob, verifyAttendanceCode,
       addHiringDetail, getHiringDetailsForWorker, getHiringDetailsForEmployer,
       getCities, getLocalities,
+      deleteJob, clearCompletedJobs,
+      schedules, createSchedule, updateScheduleStatus, getSchedulesForWorker, getSchedulesForEmployer, updateAvailableSlots
     }}>
       {children}
     </AuthContext.Provider>

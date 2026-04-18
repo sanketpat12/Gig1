@@ -52,5 +52,20 @@
   font-size: 0.78rem; color: var(--text-secondary);
 }
 .rate { font-weight: 700; color: #43e97b; font-size: 0.88rem; }
-.wc-jobtypes { display: flex; gap: 6px; flex-wrap: wrap; }
 .wc-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+
+/* Schedule button on worker card */
+.sched-worker-btn {
+  background: linear-gradient(135deg, rgba(41,98,255,0.08), rgba(124,58,237,0.08));
+  color: var(--primary);
+  border: 1px solid rgba(41,98,255,0.2);
+  font-weight: 700;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.sched-worker-btn:hover {
+  background: linear-gradient(135deg, var(--primary), #7c3aed);
+  color: #fff;
+  border-color: transparent;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(41,98,255,0.25);
+}

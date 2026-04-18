@@ -604,6 +604,43 @@
   .wd-earnings-grid   { grid-template-columns: 1fr 1fr; }
 }
 
+/* Clear buttons styling */
+.wd-btn-clear {
+  background: white;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-weight: 700;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 12px;
+}
+.wd-btn-clear:hover {
+  background: rgba(255, 65, 108, 0.06);
+  border-color: rgba(255, 65, 108, 0.2);
+  color: var(--danger);
+  transform: translateY(-1px);
+}
+
+.wd-btn-clear-single {
+  opacity: 0.3;
+  transition: all 0.2s ease;
+  padding: 6px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+.wd-btn-clear-single:hover {
+  opacity: 1;
+  background: rgba(0,0,0,0.06);
+  color: var(--danger) !important;
+  transform: rotate(90deg) scale(1.1);
+}
+
 @media (max-width: 600px) {
   .wd-sidebar { grid-template-columns: 1fr; }
   .wd-profile-card { grid-column: span 1; }
@@ -612,4 +649,181 @@
   .wd-open-jobs-grid  { grid-template-columns: 1fr; }
   .wd-job-search-bar  { flex-direction: column; gap: 8px; }
   .wd-et-header, .wd-et-row { grid-template-columns: 1fr auto auto; }
+}
+
+/* ─── Schedule / Availability CSS ──────────────────────────────── */
+.sched-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.sched-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Slot adder row */
+.sched-slot-adder {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: rgba(41,98,255,0.03);
+  border: 1px dashed rgba(41,98,255,0.15);
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+}
+
+.sched-mini-select {
+  min-width: 130px;
+  flex: 1;
+  padding: 10px 14px;
+  font-size: 0.85rem;
+}
+
+.sched-time-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sched-time-input {
+  width: 128px;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  border-radius: 12px;
+}
+
+.sched-add-btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Days grid */
+.sched-slots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+.sched-day-group {
+  background: rgba(255,255,255,0.7);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.sched-day-label {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+}
+
+/* Individual slot chip */
+.sched-slot-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(41,98,255,0.06);
+  border: 1px solid rgba(41,98,255,0.12);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.sched-slot-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 2px;
+  margin-left: auto;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+.sched-slot-remove:hover {
+  color: var(--danger);
+  background: rgba(250,82,82,0.08);
+  transform: rotate(90deg);
+}
+
+/* Empty schedule state */
+.sched-empty {
+  text-align: center;
+  padding: 36px 20px;
+  color: var(--text-muted);
+}
+
+/* Booking request cards */
+.sched-request-card {
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.6);
+  transition: all 0.2s ease;
+}
+.sched-request-card:hover {
+  box-shadow: 0 8px 24px rgba(0,0,0,0.04);
+}
+.sched-status-pending   { border-left: 4px solid var(--warning); }
+.sched-status-confirmed { border-left: 4px solid var(--success); background: rgba(18,184,134,0.02); }
+.sched-status-declined  { border-left: 4px solid var(--danger);  opacity: 0.6; }
+
+.sched-req-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+/* Status badges */
+.sched-badge-pending   { background: rgba(247,159,0,0.12); color: var(--warning); border: 1px solid rgba(247,159,0,0.3); gap: 4px; }
+.sched-badge-confirmed { background: rgba(18,184,134,0.12); color: var(--success); border: 1px solid rgba(18,184,134,0.3); gap: 4px; }
+.sched-badge-declined  { background: rgba(250,82,82,0.1); color: var(--danger); border: 1px solid rgba(250,82,82,0.2); gap: 4px; }
+
+/* Slot picker buttons (in employer modal) */
+.sched-slot-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(41,98,255,0.2);
+  background: rgba(41,98,255,0.05);
+  color: var(--primary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+  font-family: inherit;
+}
+.sched-slot-btn:hover {
+  background: rgba(41,98,255,0.12);
+  border-color: rgba(41,98,255,0.4);
+  transform: translateY(-2px);
+}
+.sched-slot-btn-active {
+  background: linear-gradient(135deg, var(--primary), #7c3aed);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 6px 16px rgba(41,98,255,0.3);
+  transform: translateY(-2px);
+}
+
+@media (max-width: 640px) {
+  .sched-slot-adder  { flex-direction: column; align-items: stretch; }
+  .sched-mini-select { width: 100%; }
+  .sched-time-input  { width: 100%; }
+  .sched-slots-grid  { grid-template-columns: 1fr; }
 }

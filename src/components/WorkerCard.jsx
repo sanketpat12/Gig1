@@ -1,10 +1,10 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { MapPin, Star, Briefcase, Clock, ChevronRight } from 'lucide-react';
+import { MapPin, Star, Briefcase, Clock, ChevronRight, Calendar } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import StarRating from './StarRating';
 import './WorkerCard.css';
 
-export default function WorkerCard({ worker, onHire, onReview, showActions = false }) {
+export default function WorkerCard({ worker, onHire, onSchedule, onReview, showActions = false }) {
   const { getAvgRating, getReviewsForWorker, jobs, currentUser } = useAuth();
   const navigate = useNavigate();
   const avg = getAvgRating(worker.id);
@@ -73,7 +73,6 @@ export default function WorkerCard({ worker, onHire, onReview, showActions = fal
       {/* Job Types */}
       <div className="wc-jobtypes">
         {worker.jobType?.includes('home') && <span className="badge badge-success">🏠 Home</span>}
-        {worker.jobType?.includes('business') && <span className="badge badge-primary">🏢 Business</span>}
       </div>
 
       {/* Work Photos (Portfolio) */}
@@ -100,6 +99,11 @@ export default function WorkerCard({ worker, onHire, onReview, showActions = fal
         </Link>
         {showActions && (
           <>
+            {onSchedule && (
+              <button id={`sched-btn-${worker.id}`} className="btn btn-sm sched-worker-btn" onClick={() => onSchedule(worker)}>
+                <Calendar size={13} /> Schedule
+              </button>
+            )}
             {onHire && worker.availability === 'available' && (
               <button id={`hire-btn-${worker.id}`} className="btn btn-primary btn-sm" onClick={() => onHire(worker)}>
                 Hire Now

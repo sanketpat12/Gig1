@@ -89,6 +89,91 @@
   align-items: center;
 }
 
+/* Clear buttons styling */
+.btn-clear-all {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-weight: 600;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing: 0.02em;
+}
+.btn-clear-all:hover {
+  background: rgba(255, 65, 108, 0.06);
+  border-color: rgba(255, 65, 108, 0.2);
+  color: var(--danger);
+  transform: translateY(-1px);
+}
+
+.btn-dismiss {
+  opacity: 0.4;
+  transition: all 0.2s ease;
+  padding: 4px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-dismiss:hover {
+  opacity: 1;
+  background: rgba(0,0,0,0.05);
+  color: var(--danger) !important;
+  transform: rotate(90deg);
+}
+
+/* Employer schedule rows */
+.emp-sched-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.7);
+  transition: all 0.2s ease;
+}
+.emp-sched-row:hover {
+  box-shadow: 0 6px 20px rgba(0,0,0,0.04);
+  transform: translateY(-1px);
+}
+.emp-sched-pending   { border-left: 3px solid var(--warning); background: rgba(247,159,0,0.03); }
+.emp-sched-confirmed { border-left: 3px solid var(--success); background: rgba(18,184,134,0.03); }
+.emp-sched-declined  { border-left: 3px solid var(--danger);  opacity: 0.7; }
+
+/* Reuse sched-badge classes from WorkerDashboard */
+.sched-badge-pending   { background: rgba(247,159,0,0.12); color: var(--warning); border: 1px solid rgba(247,159,0,0.3); display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border-radius:999px; font-size:0.75rem; font-weight:600; }
+.sched-badge-confirmed { background: rgba(18,184,134,0.12); color: var(--success); border: 1px solid rgba(18,184,134,0.3); display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border-radius:999px; font-size:0.75rem; font-weight:600; }
+.sched-badge-declined  { background: rgba(250,82,82,0.1); color: var(--danger); border: 1px solid rgba(250,82,82,0.2); display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border-radius:999px; font-size:0.75rem; font-weight:600; }
+
+/* also needed for slot buttons in emp modal */
+.sched-slot-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(41,98,255,0.2);
+  background: rgba(41,98,255,0.05);
+  color: var(--primary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+  font-family: inherit;
+}
+.sched-slot-btn:hover {
+  background: rgba(41,98,255,0.12);
+  border-color: rgba(41,98,255,0.4);
+  transform: translateY(-2px);
+}
+.sched-slot-btn-active {
+  background: linear-gradient(135deg, var(--primary), #7c3aed);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 6px 16px rgba(41,98,255,0.3);
+  transform: translateY(-2px);
+}
+
 @media (max-width: 640px) {
   .worktype-grid { grid-template-columns: 1fr; max-width: 400px; }
   .emp-toolbar { flex-direction: column; align-items: flex-start; }

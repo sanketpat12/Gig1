@@ -6,7 +6,7 @@ import {
   CheckCircle, Clock, TrendingUp, Search, IndianRupee,
   LayoutDashboard, ListChecks, Wallet, UserCircle2,
   Phone, Mail, Award, Zap, AlertCircle,
-  ArrowRight, FileText,
+  ArrowRight, FileText, Calendar, CalendarCheck, CalendarX, CalendarClock,
 } from 'lucide-react';
 import './WorkerDashboard.css';
 
@@ -21,11 +21,12 @@ const CITIES = [
   'Kolkata','Ahmedabad','Jaipur','Lucknow','Surat','Chandigarh',
 ];
 const TABS = [
-  { id:'overview',  label:'Overview',  icon:<LayoutDashboard size={16}/> },
-  { id:'jobs',      label:'My Jobs',   icon:<ListChecks size={16}/> },
-  { id:'findjobs',  label:'Find Jobs', icon:<Search size={16}/> },
-  { id:'earnings',  label:'Earnings',  icon:<Wallet size={16}/> },
-  { id:'profile',   label:'Profile',   icon:<UserCircle2 size={16}/> },
+  { id:'overview',   label:'Overview',   icon:<LayoutDashboard size={16}/> },
+  { id:'jobs',       label:'My Jobs',    icon:<ListChecks size={16}/> },
+  { id:'schedule',   label:'Schedule',   icon:<Calendar size={16}/> },
+  { id:'findjobs',   label:'Find Jobs',  icon:<Search size={16}/> },
+  { id:'earnings',   label:'Earnings',   icon:<Wallet size={16}/> },
+  { id:'profile',    label:'Profile',    icon:<UserCircle2 size={16}/> },
 ];
 
 
@@ -194,7 +195,7 @@ function FindJobsTab({ openJobs, appliedJobs, setAppliedJobs, showToast, applyFo
 
 // ── Main Worker Dashboard component ──────────────────────────────────────────
 export default function WorkerDashboard() {
-  const { currentUser, updateUser, getReviewsForWorker, getAvgRating, jobs, releasedJobs, applyForJob, updateJobStatus, acceptJob, getUserById } = useAuth();
+  const { currentUser, updateUser, getReviewsForWorker, getAvgRating, jobs, releasedJobs, applyForJob, updateJobStatus, acceptJob, getUserById, deleteJob, clearCompletedJobs, getSchedulesForWorker, updateScheduleStatus, updateAvailableSlots } = useAuth();
 
   const [activeTab,    setActiveTab]    = useState('overview');
   const [toast,        setToast]        = useState(null);
@@ -202,6 +203,7 @@ export default function WorkerDashboard() {
   const [form,         setForm]         = useState({ ...currentUser });
   const [skillInput,   setSkillInput]   = useState('');
   const [appliedJobs,  setAppliedJobs]  = useState([]);
+  const [slotInput,    setSlotInput]    = useState({ day:'Monday', from:'09:00', to:'17:00' });
 
   const reviews      = getReviewsForWorker(currentUser.id);
   const avg          = getAvgRating(currentUser.id);
@@ -280,7 +282,6 @@ export default function WorkerDashboard() {
         </div>
         <div className="wd-job-types">
           {currentUser.jobType?.includes('home')     && <span className="badge badge-success">🏠 Home</span>}
-          {currentUser.jobType?.includes('business') && <span className="badge badge-primary">🏢 Business</span>}
           {!currentUser.jobType?.length && <span style={{ fontSize:'0.78rem', color:'var(--text-muted)' }}>No work types set</span>}
         </div>
         {/* Availability toggle */}
@@ -618,8 +619,18 @@ export default function WorkerDashboard() {
 
           {completedJobs.length > 0 && (
             <div className="glass-card">
-              <h3 className="wd-jobs-section-title" style={{ color:'var(--success)' }}>
+              <h3 className="wd-jobs-section-title" style={{ color:'var(--success)', display:'flex', alignItems:'center' }}>
                 <CheckCircle size={15}/> Completed ({completedJobs.length})
+                <button 
+                  className="wd-btn-clear btn-sm" 
+                  style={{ marginLeft:'auto', fontSize:'0.7rem', height:'fit-content' }}
+                  onClick={() => {
+                    clearCompletedJobs(currentUser.id, 'worker');
+                    showToast('Work history cleared');
+                  }}
+                >
+                  Clear All
+                </button>
               </h3>
               <div className="wd-jobs-list">
                 {completedJobs.map(j => (
@@ -635,6 +646,17 @@ export default function WorkerDashboard() {
                         </p>
                       </div>
                       <span className="badge badge-success" style={{ marginLeft:'auto' }}>✅ Done</span>
+                      <button 
+                        className="wd-btn-clear-single" 
+                        style={{ marginLeft:'8px' }}
+                        onClick={() => {
+                          deleteJob(j.id);
+                          showToast('Job removed from history');
+                        }}
+                        title="Dismiss"
+                      >
+                        <X size={14}/>
+                      </button>
                     </div>
                     <p style={{ fontSize:'0.8rem', color:'var(--text-muted)', marginTop:'6px' }}>
                       Est. earnings: <strong style={{ color:'var(--success)' }}>₹{rate ? rate * 4 : '—'}</strong>
@@ -769,9 +791,12 @@ export default function WorkerDashboard() {
             <div className="form-group">
               <label className="form-label">Hourly Rate (₹)</label>
               {editing
-                ? <input type="number" className="form-input" value={form.hourlyRate||''} onChange={e => setForm(f => ({...f, hourlyRate:e.target.value}))} min="0"/>
+                ? <div style={{ position:'relative' }}>
+                    <IndianRupee size={14} style={{ position:'absolute', left:'12px', top:'50%', transform:'translateY(-50%)', color:'var(--text-muted)' }}/>
+                    <input type="number" className="form-input" style={{ paddingLeft:'32px' }} value={form.hourlyRate||''} onChange={e => setForm(f => ({...f, hourlyRate:e.target.value}))} min="0" placeholder="0"/>
+                  </div>
                 : <p className="wd-profile-val" style={{ color:'var(--success)', fontWeight:700 }}>
-                    <IndianRupee size={13} style={{ marginRight:'5px' }}/>{currentUser.hourlyRate||'Not set'}{currentUser.hourlyRate?'/hr':''}
+                    <IndianRupee size={13} style={{ marginRight:'5px' }}/>{currentUser.hourlyRate||'Not set'}{currentUser.hourlyRate?' / hr':''}
                   </p>}
             </div>
             <div className="form-group">
@@ -810,15 +835,14 @@ export default function WorkerDashboard() {
             <label className="form-label">Work Type</label>
             {editing ? (
               <div style={{ display:'flex', gap:'10px' }}>
-                {[['home','🏠 Home'],['business','🏢 Business']].map(([val,label]) => (
+                {[['home','🏠 Home']].map(([val,label]) => (
                   <button key={val} type="button" className={`role-btn ${form.jobType?.includes(val) ? 'active' : ''}`} style={{ flex:1 }}
                     onClick={() => toggleJobType(val)}>{label}</button>
                 ))}
               </div>
             ) : (
               <div style={{ display:'flex', gap:'8px' }}>
-                {currentUser.jobType?.includes('home')     && <span className="badge badge-success">🏠 Home / Personal</span>}
-                {currentUser.jobType?.includes('business') && <span className="badge badge-primary">🏢 Business</span>}
+                {currentUser.jobType?.includes('home') && <span className="badge badge-success">🏠 Home / Personal</span>}
                 {!currentUser.jobType?.length && <span style={{ color:'var(--text-muted)', fontSize:'0.83rem' }}>Not set</span>}
               </div>
             )}
@@ -901,9 +925,149 @@ export default function WorkerDashboard() {
     </div>
   );
 
+  const mySchedules = getSchedulesForWorker(currentUser.id);
+  const mySlots      = currentUser.availableSlots || [];
+
+  const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
+  const addSlot = () => {
+    if (!slotInput.from || !slotInput.to || slotInput.from >= slotInput.to) {
+      showToast('Please enter a valid time range', 'error');
+      return;
+    }
+    const newSlot = { ...slotInput, id: `slot_${Date.now()}` };
+    const updated = [...mySlots, newSlot];
+    updateAvailableSlots(updated);
+    showToast('Availability slot added!');
+  };
+
+  const removeSlot = (slotId) => {
+    const updated = mySlots.filter(s => s.id !== slotId);
+    updateAvailableSlots(updated);
+    showToast('Slot removed');
+  };
+
+  const scheduleTab = (
+    <div className="wd-tab-content">
+      {/* My Availability Slots */}
+      <div className="glass-card sched-card">
+        <div className="sched-header">
+          <CalendarClock size={18} style={{ color:'var(--primary)' }}/>
+          <h3 style={{ fontWeight:800, fontSize:'1rem' }}>My Availability</h3>
+          <p style={{ color:'var(--text-muted)', fontSize:'0.8rem', marginLeft:'auto' }}>
+            Employers can book you in these time slots
+          </p>
+        </div>
+
+        {/* Slot adder */}
+        <div className="sched-slot-adder">
+          <select className="form-select sched-mini-select" value={slotInput.day}
+            onChange={e => setSlotInput(s => ({...s, day: e.target.value}))}>
+            {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+          <div className="sched-time-group">
+            <span style={{ fontSize:'0.78rem', color:'var(--text-muted)', fontWeight:600 }}>From</span>
+            <input type="time" className="form-input sched-time-input" value={slotInput.from}
+              onChange={e => setSlotInput(s => ({...s, from: e.target.value}))}/>
+          </div>
+          <div className="sched-time-group">
+            <span style={{ fontSize:'0.78rem', color:'var(--text-muted)', fontWeight:600 }}>To</span>
+            <input type="time" className="form-input sched-time-input" value={slotInput.to}
+              onChange={e => setSlotInput(s => ({...s, to: e.target.value}))}/>
+          </div>
+          <button className="btn btn-primary btn-sm sched-add-btn" onClick={addSlot}>
+            <Plus size={14}/> Add Slot
+          </button>
+        </div>
+
+        {/* Current slots grouped by day */}
+        {mySlots.length === 0 ? (
+          <div className="sched-empty">
+            <CalendarClock size={36} style={{ opacity:0.15, margin:'0 auto 10px' }}/>
+            <p style={{ color:'var(--text-muted)', fontSize:'0.85rem' }}>
+              No availability slots added yet. Add slots above so employers can schedule you.
+            </p>
+          </div>
+        ) : (
+          <div className="sched-slots-grid">
+            {DAYS.filter(d => mySlots.some(s => s.day === d)).map(day => (
+              <div key={day} className="sched-day-group">
+                <p className="sched-day-label">{day}</p>
+                <div style={{ display:'flex', flexDirection:'column', gap:'6px' }}>
+                  {mySlots.filter(s => s.day === day).map(slot => (
+                    <div key={slot.id} className="sched-slot-chip">
+                      <Clock size={12} style={{ color:'var(--primary)' }}/>
+                      <span>{slot.from} – {slot.to}</span>
+                      <button className="sched-slot-remove" onClick={() => removeSlot(slot.id)} title="Remove">
+                        <X size={11}/>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Incoming schedule requests */}
+      <div className="glass-card sched-card">
+        <div className="sched-header" style={{ marginBottom:'16px' }}>
+          <Calendar size={18} style={{ color:'#7c3aed' }}/>
+          <h3 style={{ fontWeight:800, fontSize:'1rem' }}>Booking Requests</h3>
+          <span className="badge badge-primary" style={{ marginLeft:'auto' }}>{mySchedules.filter(s => s.status === 'pending').length} Pending</span>
+        </div>
+
+        {mySchedules.length === 0 ? (
+          <div className="sched-empty">
+            <Calendar size={36} style={{ opacity:0.15, margin:'0 auto 10px' }}/>
+            <p style={{ color:'var(--text-muted)', fontSize:'0.85rem' }}>No booking requests yet.</p>
+          </div>
+        ) : (
+          <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
+            {mySchedules.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).map(sch => (
+              <div key={sch.id} className={`sched-request-card sched-status-${sch.status}`}>
+                <div className="sched-req-top">
+                  <div className="avatar avatar-sm" style={{ background:'linear-gradient(135deg,var(--primary),#7c3aed)', flexShrink:0 }}>
+                    {sch.employerName?.[0]?.toUpperCase()}
+                  </div>
+                  <div style={{ flex:1 }}>
+                    <p style={{ fontWeight:700, fontSize:'0.9rem' }}>{sch.employerName}</p>
+                    <p style={{ fontSize:'0.75rem', color:'var(--text-muted)' }}>
+                      {sch.day} · {sch.from} – {sch.to}
+                    </p>
+                    {sch.note && <p style={{ fontSize:'0.8rem', color:'var(--text-secondary)', marginTop:'4px', fontStyle:'italic' }}>"{sch.note}"</p>}
+                  </div>
+                  <span className={`badge sched-badge-${sch.status}`}>
+                    {sch.status === 'pending'   && <><CalendarClock size={11}/> Pending</>}
+                    {sch.status === 'confirmed' && <><CalendarCheck size={11}/> Confirmed</>}
+                    {sch.status === 'declined'  && <><CalendarX size={11}/> Declined</>}
+                  </span>
+                </div>
+                {sch.status === 'pending' && (
+                  <div style={{ display:'flex', gap:'8px', marginTop:'10px' }}>
+                    <button className="btn btn-success btn-sm" style={{ flex:1 }}
+                      onClick={async () => { await updateScheduleStatus(sch.id, 'confirmed'); showToast('Booking confirmed! ✅'); }}>
+                      <CalendarCheck size={13}/> Confirm
+                    </button>
+                    <button className="btn btn-danger btn-sm" style={{ flex:1 }}
+                      onClick={async () => { await updateScheduleStatus(sch.id, 'declined'); showToast('Booking declined', 'error'); }}>
+                      <CalendarX size={13}/> Decline
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   const TAB_CONTENT = {
     overview: overviewTab,
     jobs:     jobsTab,
+    schedule: scheduleTab,
     findjobs: (
       <FindJobsTab
         currentUser={currentUser}

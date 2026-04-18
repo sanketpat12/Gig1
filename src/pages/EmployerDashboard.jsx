@@ -2,19 +2,19 @@ import { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import WorkerCard from '../components/WorkerCard';
 import ReviewModal from '../components/ReviewModal';
-import { Search, MapPin, Filter, Briefcase, Home, Building2, SlidersHorizontal, X, PlusCircle, Bell, CheckCircle, Users, ShieldCheck, Hash } from 'lucide-react';
+import { Search, MapPin, Filter, Briefcase, Home, Building2, SlidersHorizontal, X, PlusCircle, Bell, CheckCircle, Users, ShieldCheck, Hash, Calendar, CalendarCheck, CalendarX, CalendarClock } from 'lucide-react';
 import './EmployerDashboard.css';
 
 const WORK_TYPE_OPTIONS = [
   { val: 'home',     label: 'Home / Personal', icon: <Home size={20}/>,      desc: 'Domestic help, repairs, cooking, cleaning for your home or family.', color: 'var(--success)' },
-  { val: 'business', label: 'Business Use',    icon: <Building2 size={20}/>, desc: 'Office support, logistics, construction, professional services.',       color: 'var(--primary)' },
 ];
 
 export default function EmployerDashboard() {
-  const { currentUser, getWorkers, getCities, getLocalities, postJob, releaseJob, removeReleasedJob, getJobsForEmployer, updateJobStatus, getWorkerById, verifyAttendanceCode, getUserById } = useAuth();
+  const { currentUser, getWorkers, getCities, getLocalities, postJob, releaseJob, removeReleasedJob, getJobsForEmployer, updateJobStatus, getWorkerById, verifyAttendanceCode, getUserById, deleteJob, clearCompletedJobs, createSchedule, getSchedulesForEmployer, refreshWorkers } = useAuth();
 
   /* Work type selection - Persist in sessionStorage so 'back' button doesn't reset it */
-  const [workType, setWorkType] = useState(() => sessionStorage.getItem('gig_emp_workType') || null);
+  /* Default to 'home' as home use is removed */
+  const [workType, setWorkType] = useState('home');
 
   /* Search / filter */
   const [city, setCity]           = useState(() => sessionStorage.getItem('gig_emp_city') || '');
@@ -41,7 +41,14 @@ export default function EmployerDashboard() {
   /* Hired worker profile modal - stores { worker, job } */
   const [selectedHiredWorker, setSelectedHiredWorker] = useState(null);
   
+  /* Schedule modal */
+  const [scheduleWorker, setScheduleWorker] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+
   const [toast, setToast] = useState(null);
+
+  // Auto-refresh workers from DB when employer opens the dashboard
+  useEffect(() => { refreshWorkers(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync state to sessionStorage whenever it changes
   useEffect(() => {
@@ -85,48 +92,29 @@ export default function EmployerDashboard() {
   const verifiedHiredJobs = hiredJobs.filter(j => j.status === 'verified');
   const completedHiredJobs = hiredJobs.filter(j => j.status === 'completed');
 
-  if (!workType) {
-    return (
-      <div className="emp-page">
-        <div className="emp-hero">
-          <h1 className="emp-welcome">Hi, {currentUser?.name?.split(' ')[0]} 👋</h1>
-          <p className="emp-sub">What type of work do you need help with today?</p>
-        </div>
-
-        <div className="worktype-grid">
-          {WORK_TYPE_OPTIONS.map(opt => (
-            <button
-              key={opt.val}
-              id={`worktype-${opt.val}`}
-              className="worktype-card glass-card"
-              onClick={() => setWorkType(opt.val)}
-            >
-              <div className="worktype-icon" style={{ background: `${opt.color}22`, color: opt.color, border: `1px solid ${opt.color}44` }}>
-                {opt.icon}
-              </div>
-              <h2 className="worktype-label">{opt.label}</h2>
-              <p className="worktype-desc">{opt.desc}</p>
-              <span className="worktype-cta" style={{ color: opt.color }}>Browse Workers →</span>
-            </button>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  const mySchedules = getSchedulesForEmployer(currentUser.id);
+  const pendingSchedules   = mySchedules.filter(s => s.status === 'pending');
+  const confirmedSchedules = mySchedules.filter(s => s.status === 'confirmed');
+  const declinedSchedules  = mySchedules.filter(s => s.status === 'declined');
 
   return (
     <div className="emp-page">
       {/* Header */}
       <div className="emp-toolbar">
         <div className="emp-toolbar-left">
-          <button id="back-worktype" className="btn btn-secondary btn-sm" onClick={() => setWorkType(null)}>
-            ← Change Type
-          </button>
-          <span className={`badge ${workType === 'home' ? 'badge-success' : 'badge-primary'}`} style={{ fontSize:'0.82rem', padding:'6px 14px' }}>
-            {workType === 'home' ? '🏠 Home / Personal' : '🏢 Business'}
+          <span className="badge badge-success" style={{ fontSize:'0.82rem', padding:'6px 14px' }}>
+            🏠 Home / Personal
           </span>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems:'center' }}>
+          <button
+            className={`btn btn-secondary btn-sm ${refreshing ? 'btn-disabled' : ''}`}
+            onClick={async () => { setRefreshing(true); await refreshWorkers(); setRefreshing(false); showToast('Worker list refreshed!'); }}
+            title="Reload workers from database"
+            disabled={refreshing}
+          >
+            {refreshing ? '⟳ Refreshing…' : '⟳ Refresh'}
+          </button>
           <button
             className="btn btn-primary btn-sm"
             onClick={() => setShowReleaseModal(true)}
@@ -144,24 +132,36 @@ export default function EmployerDashboard() {
         </div>
       </div>
 
-      {/* View Switcher: Browse Workers | Hired Workers */}
-      <div className="glass-card" style={{ display:'flex', gap:'4px', padding:'4px', marginBottom:'20px' }}>
+      {/* View Switcher: Browse Workers | Hired Workers | My Schedules */}
+      <div className="glass-card" style={{ display:'flex', gap:'4px', padding:'4px', marginBottom:'20px', flexWrap:'wrap' }}>
         <button
           className={`btn btn-sm ${empView === 'browse' ? 'btn-primary' : 'btn-secondary'}`}
-          style={{ flex:1, borderRadius:'8px' }}
+          style={{ flex:1, borderRadius:'8px', minWidth:'100px' }}
           onClick={() => setEmpView('browse')}
         >
           <Search size={14}/> Browse Workers
         </button>
         <button
           className={`btn btn-sm ${empView === 'hired' ? 'btn-primary' : 'btn-secondary'}`}
-          style={{ flex:1, borderRadius:'8px', position:'relative' }}
+          style={{ flex:1, borderRadius:'8px', position:'relative', minWidth:'100px' }}
           onClick={() => setEmpView('hired')}
         >
           <Users size={14}/> Hired Workers
           {hiredJobs.length > 0 && (
             <span style={{ position:'absolute', top:'-4px', right:'-4px', background:'var(--danger)', color:'#fff', borderRadius:'50%', width:'18px', height:'18px', fontSize:'0.65rem', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700 }}>
               {hiredJobs.length}
+            </span>
+          )}
+        </button>
+        <button
+          className={`btn btn-sm ${empView === 'schedules' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{ flex:1, borderRadius:'8px', position:'relative', minWidth:'100px' }}
+          onClick={() => setEmpView('schedules')}
+        >
+          <Calendar size={14}/> My Schedules
+          {pendingSchedules.length > 0 && (
+            <span style={{ position:'absolute', top:'-4px', right:'-4px', background:'var(--warning)', color:'#fff', borderRadius:'50%', width:'18px', height:'18px', fontSize:'0.65rem', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700 }}>
+              {pendingSchedules.length}
             </span>
           )}
         </button>
@@ -334,6 +334,7 @@ export default function EmployerDashboard() {
                       postJob({ employerId: currentUser.id, workerId: worker.id, workerName: worker.name, employerName: currentUser.name });
                       showToast(`Hire request sent to ${worker.name}! Check your Hired Workers tab.`);
                     }}
+                    onSchedule={(worker) => setScheduleWorker(worker)}
                     onReview={(worker) => setReviewWorker(worker)}
                   />
                 </div>
@@ -505,6 +506,16 @@ export default function EmployerDashboard() {
                 <div className="glass-card" style={{ borderLeft:'4px solid var(--success)' }}>
                   <h3 style={{ fontWeight:700, fontSize:'0.95rem', marginBottom:'14px', display:'flex', alignItems:'center', gap:'8px', color:'var(--success)' }}>
                     <CheckCircle size={16}/> Completed ({completedHiredJobs.length})
+                    <button 
+                      className="btn btn-clear-all btn-sm" 
+                      style={{ marginLeft:'auto', padding:'4px 12px', fontSize:'0.72rem' }}
+                      onClick={() => {
+                        clearCompletedJobs(currentUser.id, 'employer');
+                        showToast('Completed history cleared');
+                      }}
+                    >
+                      Clear All
+                    </button>
                   </h3>
                   <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
                     {completedHiredJobs.map(j => (
@@ -517,6 +528,17 @@ export default function EmployerDashboard() {
                           <p style={{ fontSize:'0.73rem', color:'var(--text-muted)' }}>Job completed</p>
                         </div>
                         <span className="badge badge-success">✅ Done</span>
+                        <button 
+                          className="btn-dismiss" 
+                          style={{ marginLeft:'12px', color:'var(--text-muted)' }}
+                          onClick={() => {
+                            deleteJob(j.id);
+                            showToast('Job removed from history');
+                          }}
+                          title="Dismiss"
+                        >
+                          <X size={14}/>
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -639,6 +661,111 @@ export default function EmployerDashboard() {
         );
       })()}
 
+      {/* ──── MY SCHEDULES VIEW ──── */}
+      {empView === 'schedules' && (
+        <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
+          {mySchedules.length === 0 ? (
+            <div className="glass-card" style={{ textAlign:'center', padding:'60px 20px' }}>
+              <CalendarClock size={56} style={{ color:'var(--text-muted)', margin:'0 auto 16px', opacity:0.2 }}/>
+              <h3 style={{ color:'var(--text-secondary)', fontWeight:700, marginBottom:'8px' }}>No Schedule Requests Yet</h3>
+              <p style={{ color:'var(--text-muted)', fontSize:'0.85rem', marginBottom:'20px' }}>
+                Browse workers and click "Schedule" to book them for a specific time slot.
+              </p>
+              <button className="btn btn-primary btn-sm" onClick={() => setEmpView('browse')}>
+                <Search size={14}/> Browse Workers
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Pending */}
+              {pendingSchedules.length > 0 && (
+                <div className="glass-card" style={{ borderLeft:'4px solid var(--warning)' }}>
+                  <h3 style={{ fontWeight:700, fontSize:'0.95rem', marginBottom:'16px', display:'flex', alignItems:'center', gap:'8px', color:'var(--warning)' }}>
+                    <CalendarClock size={16}/> Awaiting Confirmation ({pendingSchedules.length})
+                  </h3>
+                  <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
+                    {pendingSchedules.map(s => (
+                      <div key={s.id} className="emp-sched-row emp-sched-pending">
+                        <div className="avatar avatar-sm" style={{ background:'linear-gradient(135deg,var(--warning),#ffa000)', flexShrink:0 }}>
+                          {s.workerName?.[0]?.toUpperCase()}
+                        </div>
+                        <div style={{ flex:1 }}>
+                          <p style={{ fontWeight:700, fontSize:'0.9rem' }}>{s.workerName}</p>
+                          <p style={{ fontSize:'0.75rem', color:'var(--text-muted)' }}>
+                            <CalendarClock size={11} style={{ marginRight:'4px', verticalAlign:'middle' }}/>
+                            {s.day} · {s.from} – {s.to}
+                          </p>
+                          {s.note && <p style={{ fontSize:'0.78rem', color:'var(--text-secondary)', marginTop:'4px', fontStyle:'italic' }}>"{s.note}"</p>}
+                        </div>
+                        <span className="badge sched-badge-pending" style={{ flexShrink:0 }}>
+                          <CalendarClock size={11}/> Pending
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Confirmed */}
+              {confirmedSchedules.length > 0 && (
+                <div className="glass-card" style={{ borderLeft:'4px solid var(--success)' }}>
+                  <h3 style={{ fontWeight:700, fontSize:'0.95rem', marginBottom:'16px', display:'flex', alignItems:'center', gap:'8px', color:'var(--success)' }}>
+                    <CalendarCheck size={16}/> Confirmed Bookings ({confirmedSchedules.length})
+                  </h3>
+                  <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
+                    {confirmedSchedules.map(s => (
+                      <div key={s.id} className="emp-sched-row emp-sched-confirmed">
+                        <div className="avatar avatar-sm" style={{ background:'linear-gradient(135deg,#43e97b,#12b886)', flexShrink:0 }}>
+                          {s.workerName?.[0]?.toUpperCase()}
+                        </div>
+                        <div style={{ flex:1 }}>
+                          <p style={{ fontWeight:700, fontSize:'0.9rem' }}>{s.workerName}</p>
+                          <p style={{ fontSize:'0.75rem', color:'var(--text-muted)' }}>
+                            <CalendarCheck size={11} style={{ marginRight:'4px', verticalAlign:'middle' }}/>
+                            {s.day} · {s.from} – {s.to}
+                          </p>
+                          {s.note && <p style={{ fontSize:'0.78rem', color:'var(--text-secondary)', marginTop:'4px', fontStyle:'italic' }}>"{s.note}"</p>}
+                        </div>
+                        <span className="badge sched-badge-confirmed" style={{ flexShrink:0 }}>
+                          <CalendarCheck size={11}/> Confirmed ✅
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Declined */}
+              {declinedSchedules.length > 0 && (
+                <div className="glass-card" style={{ borderLeft:'4px solid var(--danger)', opacity:0.75 }}>
+                  <h3 style={{ fontWeight:700, fontSize:'0.95rem', marginBottom:'16px', display:'flex', alignItems:'center', gap:'8px', color:'var(--danger)' }}>
+                    <CalendarX size={16}/> Declined ({declinedSchedules.length})
+                  </h3>
+                  <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
+                    {declinedSchedules.map(s => (
+                      <div key={s.id} className="emp-sched-row emp-sched-declined">
+                        <div className="avatar avatar-sm" style={{ background:'linear-gradient(135deg,#ff6584,#c0392b)', flexShrink:0 }}>
+                          {s.workerName?.[0]?.toUpperCase()}
+                        </div>
+                        <div style={{ flex:1 }}>
+                          <p style={{ fontWeight:700, fontSize:'0.9rem' }}>{s.workerName}</p>
+                          <p style={{ fontSize:'0.75rem', color:'var(--text-muted)' }}>
+                            {s.day} · {s.from} – {s.to}
+                          </p>
+                        </div>
+                        <span className="badge sched-badge-declined" style={{ flexShrink:0 }}>
+                          <CalendarX size={11}/> Declined
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
       {/* Release Job Modal */}
       {showReleaseModal && (
         <ReleaseJobModal
@@ -647,6 +774,20 @@ export default function EmployerDashboard() {
             await releaseJob({ ...jobData, employerId: currentUser.id, employerName: currentUser.name });
             setShowReleaseModal(false);
             showToast('Job released successfully! Workers can now find and apply for it.');
+          }}
+        />
+      )}
+
+      {/* Schedule Modal */}
+      {scheduleWorker && (
+        <ScheduleModal
+          worker={scheduleWorker}
+          employer={currentUser}
+          onClose={() => setScheduleWorker(null)}
+          onScheduled={async (data) => {
+            await createSchedule(data);
+            setScheduleWorker(null);
+            showToast(`📅 Schedule request sent to ${scheduleWorker.name}!`);
           }}
         />
       )}
@@ -663,7 +804,7 @@ export default function EmployerDashboard() {
 function ReleaseJobModal({ onClose, onRelease }) {
   const [formData, setFormData] = useState({
     title: '',
-    typeOfWork: '',
+    typeOfWork: 'home',
     duration: '',
     budget: '',
     location: '',
@@ -701,11 +842,7 @@ function ReleaseJobModal({ onClose, onRelease }) {
           <div className="grid-2">
             <div className="form-group">
               <label className="form-label">Type of Work</label>
-              <select className="form-select" required value={formData.typeOfWork} onChange={e => setFormData(f => ({...f, typeOfWork: e.target.value}))}>
-                <option value="">Select...</option>
-                <option value="home">Home / Personal</option>
-                <option value="business">Business</option>
-              </select>
+              <p className="badge badge-success" style={{ width:'fit-content', padding:'8px 16px', margin:0 }}>🏠 Home / Personal</p>
             </div>
             <div className="form-group">
               <label className="form-label">Location (City)</label>
@@ -738,6 +875,114 @@ function ReleaseJobModal({ onClose, onRelease }) {
             <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Post Job</button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+// ── SCHEDULE MODAL ────────────────────────────────────────────────────────────
+function ScheduleModal({ worker, employer, onClose, onScheduled }) {
+  const slots = worker.availableSlots || [];
+  const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const slotsByDay = DAYS.reduce((acc, d) => {
+    const daySlots = slots.filter(s => s.day === d);
+    if (daySlots.length) acc[d] = daySlots;
+    return acc;
+  }, {});
+
+  const [selected, setSelected] = useState(null); // { day, from, to }
+  const [note, setNote] = useState('');
+
+  const handleBook = () => {
+    if (!selected) return;
+    onScheduled({
+      workerId: worker.id,
+      workerName: worker.name,
+      employerId: employer.id,
+      employerName: employer.name,
+      day: selected.day,
+      from: selected.from,
+      to: selected.to,
+      note,
+    });
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content animate-fadeInUp" onClick={e => e.stopPropagation()}
+        style={{ maxWidth:'500px', padding:0, background:'transparent', boxShadow:'none' }}>
+        <div style={{ background:'#fff', borderRadius:'20px', overflow:'hidden' }}>
+          {/* Header */}
+          <div style={{ background:'linear-gradient(135deg,var(--primary),#7c3aed)', padding:'20px 24px', color:'#fff' }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
+                <Calendar size={20}/>
+                <div>
+                  <h2 style={{ fontSize:'1.1rem', fontWeight:800, margin:0 }}>Schedule {worker.name.split(' ')[0]}</h2>
+                  <p style={{ fontSize:'0.8rem', opacity:0.85, margin:0 }}>Pick an available time slot</p>
+                </div>
+              </div>
+              <button className="btn-icon" style={{ color:'#fff' }} onClick={onClose}><X size={20}/></button>
+            </div>
+          </div>
+
+          <div style={{ padding:'24px', display:'flex', flexDirection:'column', gap:'20px' }}>
+            {slots.length === 0 ? (
+              <div style={{ textAlign:'center', padding:'32px 20px', color:'var(--text-muted)' }}>
+                <CalendarX size={40} style={{ opacity:0.2, margin:'0 auto 12px' }}/>
+                <p style={{ fontSize:'0.88rem' }}>
+                  {worker.name.split(' ')[0]} hasn't added any availability slots yet.<br/>
+                  <span style={{ fontSize:'0.78rem' }}>Ask them to add their schedule on their dashboard.</span>
+                </p>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <p style={{ fontSize:'0.8rem', fontWeight:700, color:'var(--text-muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:'12px' }}>
+                    Available Slots
+                  </p>
+                  <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
+                    {Object.entries(slotsByDay).map(([day, daySlots]) => (
+                      <div key={day}>
+                        <p style={{ fontSize:'0.78rem', fontWeight:700, color:'var(--text-secondary)', marginBottom:'6px' }}>{day}</p>
+                        <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' }}>
+                          {daySlots.map(slot => {
+                            const isSel = selected?.day === day && selected?.from === slot.from && selected?.to === slot.to;
+                            return (
+                              <button key={slot.id}
+                                onClick={() => setSelected({ day, from: slot.from, to: slot.to })}
+                                className={`sched-slot-btn ${isSel ? 'sched-slot-btn-active' : ''}`}
+                              >
+                                <CalendarClock size={12}/>
+                                {slot.from} – {slot.to}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Note for Worker (optional)</label>
+                  <textarea className="form-textarea" rows={3}
+                    placeholder="Describe what you need help with..."
+                    value={note} onChange={e => setNote(e.target.value)}/>
+                </div>
+              </>
+            )}
+
+            <div style={{ display:'flex', gap:'12px' }}>
+              <button className="btn btn-secondary" style={{ flex:1 }} onClick={onClose}>Cancel</button>
+              <button className="btn btn-primary" style={{ flex:1 }}
+                disabled={!selected}
+                onClick={handleBook}>
+                <CalendarCheck size={15}/> Send Booking Request
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -6,7 +6,7 @@ import { Search, MapPin, Briefcase, SlidersHorizontal, X, PlusCircle, Bell, Chec
 import './EmployerDashboard.css';
 
 export default function EmployerDashboard() {
-  const { currentUser, getWorkers, getCities, getLocalities, postJob, releasedJobs, releaseJob, updateReleasedJob, removeReleasedJob, getJobsForEmployer, updateJobStatus, getWorkerById, verifyAttendanceCode, getUserById, deleteJob, clearCompletedJobs, createSchedule, getSchedulesForEmployer, refreshWorkers } = useAuth();
+  const { currentUser, getWorkers, getCities, getLocalities, postJob, releasedJobs, releaseJob, updateReleasedJob, removeReleasedJob, getJobsForEmployer, updateJobStatus, getWorkerById, verifyAttendanceCode, getUserById, deleteJob, clearCompletedJobs, createSchedule, getSchedulesForEmployer, refreshWorkers, isJobAccepted } = useAuth();
 
   /* Work type selection - Persist in sessionStorage so 'back' button doesn't reset it */
   /* Default to 'home' as home use is removed */
@@ -102,9 +102,9 @@ export default function EmployerDashboard() {
   const selectedApplicant = selectedApplicantWorker ? { worker: selectedApplicantWorker, jobId: selectedApplicantApp.id } : null;
 
   // Hired workers (accepted / verified / completed)
-  const hiredJobs = employerJobs.filter(j => ['open','verified','completed'].includes(j.status) || j.status?.startsWith('accepted_'));
+  const hiredJobs = employerJobs.filter(j => ['open','verified','completed'].includes(j.status) || isJobAccepted(j));
   const awaitingAcceptJobs = hiredJobs.filter(j => j.status === 'open');
-  const acceptedHiredJobs = hiredJobs.filter(j => j.status?.startsWith('accepted_'));
+  const acceptedHiredJobs = hiredJobs.filter(j => isJobAccepted(j));
   const verifiedHiredJobs = hiredJobs.filter(j => j.status === 'verified');
   const completedHiredJobs = hiredJobs.filter(j => j.status === 'completed');
 
@@ -731,7 +731,7 @@ export default function EmployerDashboard() {
         if (!liveWorker) return null;
         
         const isVerified = liveStatus === 'verified' || liveStatus === 'completed';
-        const isAccepted = liveStatus.startsWith('accepted_');
+        const isAccepted = isJobAccepted(liveJob);
         
         return (
           <div className="modal-overlay" onClick={() => setSelectedHiredWorker(null)}>

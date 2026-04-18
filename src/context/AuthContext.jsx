@@ -224,6 +224,31 @@ const extractVerificationCode = (status) =>
     ? status.slice('accepted_'.length)
     : null;
 
+const isAcceptedJobStatus = (status) =>
+  status === 'accepted' || (
+    typeof status === 'string' && status.startsWith('accepted_')
+  );
+
+const getStoredJobVerificationCode = (job) => {
+  if (!job) return null;
+  return job.verifyCode || extractVerificationCode(job.status) || null;
+};
+
+const normalizeJobRecord = (job) => {
+  if (!job) return job;
+
+  const legacyCode = extractVerificationCode(job.status);
+  if (!legacyCode) return job;
+
+  return {
+    ...job,
+    status: 'accepted',
+    verifyCode: job.verifyCode || legacyCode,
+  };
+};
+
+const normalizeJobs = (items = []) => items.map(normalizeJobRecord);
+
 const generateVerificationCode = () =>
   String(Math.floor(1000 + Math.random() * 9000));
 
@@ -231,7 +256,7 @@ const getJobStatusPriority = (status) => {
   if (!status) return 0;
   if (status === 'applied') return 1;
   if (status === 'open') return 2;
-  if (status.startsWith('accepted_')) return 3;
+  if (isAcceptedJobStatus(status)) return 3;
   if (status === 'verified') return 4;
   if (status === 'completed') return 5;
   if (status === 'rejected') return 6;
@@ -354,7 +379,7 @@ export function AuthProvider({ children }) {
 
         setUsers(restoredUser ? mergeUsersById(mergedUsers, restoredUser) : mergedUsers);
         if (dbReviews.length > 0) setReviews(dbReviews);
-        if (dbJobs.length > 0) setJobs(dbJobs);
+        if (dbJobs.length > 0) setJobs(normalizeJobs(dbJobs));
         if (dbHirings.length > 0) setHiringDetails(dbHirings);
         if (dbReleasedJobs.length > 0) setReleasedJobs(dbReleasedJobs);
         if (dbSchedules.length > 0) setSchedules(dbSchedules);
@@ -476,11 +501,12 @@ export function AuthProvider({ children }) {
       }
 
       if (dbJobs) {
+        const normalizedRemoteJobs = normalizeJobs(dbJobs);
+
         setJobs((prev) => {
           const now = Date.now();
           const localJobsById = new Map(prev.map((job) => [job.id, job]));
-
-          return dbJobs.map((remoteJob) => {
+          const syncedJobs = normalizedRemoteJobs.map((remoteJob) => {
             const mutation = recentJobMutationsRef.current.get(remoteJob.id);
             if (!mutation) return remoteJob;
 
@@ -509,6 +535,23 @@ export function AuthProvider({ children }) {
               verifiedAt: localJob.verifiedAt ?? remoteJob.verifiedAt,
             };
           });
+
+          const syncedJobIds = new Set(syncedJobs.map((job) => job.id));
+          const pendingLocalJobs = prev.filter((localJob) => {
+            if (syncedJobIds.has(localJob.id)) return false;
+
+            const mutation = recentJobMutationsRef.current.get(localJob.id);
+            if (!mutation) return false;
+
+            if (now - mutation.timestamp > JOB_MUTATION_GRACE_MS) {
+              recentJobMutationsRef.current.delete(localJob.id);
+              return false;
+            }
+
+            return true;
+          });
+
+          return [...syncedJobs, ...pendingLocalJobs];
         });
       }
 
@@ -942,19 +985,63 @@ export function AuthProvider({ children }) {
   };
 
   // Worker accepts a hire request → generates a consistent 4-digit code based on jobId
+  const updateJobWithSelect = async (jobId, payload) => {
+    const { data, error } = await supabase
+      .from('jobs')
+      .update(payload)
+      .eq('id', jobId)
+      .select('id, status')
+      .maybeSingle();
+
+    if (error) {
+      return { success: false, error };
+    }
+
+    if (!data?.id) {
+      return {
+        success: false,
+        error: { message: 'The job could not be updated in Supabase.' },
+      };
+    }
+
+    return { success: true, data: normalizeJobRecord(data) };
+  };
+
   const acceptJob = async (jobId) => {
     const code = generateVerificationCode();
-    const statusWithCode = `accepted_${code}`;
-    
-    // Try to update Supabase. If this fails (e.g. testing with demo users), local state handles it.
+    const acceptedPatch = { status: 'accepted', verifyCode: code };
+    let persistedRemotely = false;
+    let lastError = null;
+
     try {
-      const { error } = await supabase.from('jobs').update({ status: statusWithCode }).eq('id', jobId);
-      if (error) console.warn('Supabase error on acceptJob:', error.message);
-    } catch (e) { console.warn('Supabase error on acceptJob', e); }
-    
-    rememberJobMutation(jobId, { status: statusWithCode, verifyCode: code });
-    setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: statusWithCode, verifyCode: code } : j));
-    return code;
+      const acceptedResult = await updateJobWithSelect(jobId, acceptedPatch);
+      if (acceptedResult.success) {
+        persistedRemotely = true;
+      } else {
+        lastError = acceptedResult.error;
+
+        const legacyResult = await updateJobWithSelect(jobId, { status: `accepted_${code}` });
+        if (legacyResult.success) {
+          persistedRemotely = true;
+        } else {
+          lastError = legacyResult.error;
+        }
+      }
+    } catch (error) {
+      lastError = error;
+    }
+
+    if (!persistedRemotely && !isDemoUserId(currentUser?.id)) {
+      console.warn('Supabase error on acceptJob:', lastError);
+      return {
+        success: false,
+        message: lastError?.message || 'Could not save your acceptance. Please try again.',
+      };
+    }
+
+    rememberJobMutation(jobId, acceptedPatch);
+    setJobs(prev => prev.map(j => j.id === jobId ? { ...j, ...acceptedPatch } : j));
+    return { success: true, code };
   };
 
   // Employer enters the code worker tells them → marks attendance
@@ -968,17 +1055,36 @@ export function AuthProvider({ children }) {
     
     // 1. Try reading live status from Supabase
     try {
-      const { data, error } = await supabase.from('jobs').select('status').eq('id', jobId).single();
-      if (!error && data?.status) {
-        correctCode = extractVerificationCode(data.status);
+      let liveJob = null;
+      const fullSelect = await supabase
+        .from('jobs')
+        .select('status, verifyCode')
+        .eq('id', jobId)
+        .single();
+
+      if (!fullSelect.error && fullSelect.data) {
+        liveJob = fullSelect.data;
+      } else if (/verifyCode/i.test(fullSelect.error?.message || '')) {
+        const fallbackSelect = await supabase
+          .from('jobs')
+          .select('status')
+          .eq('id', jobId)
+          .single();
+
+        if (!fallbackSelect.error && fallbackSelect.data) {
+          liveJob = fallbackSelect.data;
+        }
+      }
+
+      if (liveJob) {
+        correctCode = getStoredJobVerificationCode(liveJob);
       }
     } catch (e) { console.warn('Supabase error reading code', e); }
     
     // 2. Fallback to local state
     if (!correctCode) {
       const job = jobs.find(j => j.id === jobId);
-      if (job?.status?.startsWith('accepted_')) correctCode = extractVerificationCode(job.status);
-      else if (job?.verifyCode) correctCode = job.verifyCode;
+      correctCode = getStoredJobVerificationCode(job);
     }
 
     if (!correctCode) {
@@ -989,9 +1095,28 @@ export function AuthProvider({ children }) {
     }
     
     if (correctCode === normalizedCode) {
+      let persistedRemotely = false;
+      let lastError = null;
+
       try {
-        await supabase.from('jobs').update({ status: 'verified' }).eq('id', jobId);
-      } catch (e) { console.warn('Supabase error on verifyAttendanceCode', e); }
+        const verificationResult = await updateJobWithSelect(jobId, { status: 'verified' });
+        if (verificationResult.success) {
+          persistedRemotely = true;
+        } else {
+          lastError = verificationResult.error;
+        }
+      } catch (error) {
+        lastError = error;
+      }
+
+      if (!persistedRemotely && !isDemoUserId(currentUser?.id)) {
+        console.warn('Supabase error on verifyAttendanceCode:', lastError);
+        return {
+          success: false,
+          message: lastError?.message || 'Could not confirm the worker arrival. Please try again.',
+        };
+      }
+
       rememberJobMutation(jobId, { status: 'verified', verifiedAt: new Date().toISOString() });
       setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: 'verified', verifiedAt: new Date().toISOString() } : j));
       return { success: true, message: 'Worker arrival confirmed. Attendance marked successfully.' };
@@ -1056,7 +1181,7 @@ export function AuthProvider({ children }) {
       getWorkers, getWorkerById, getUserById, refreshWorkers,
       getReviewsForWorker, getAvgRating, addReview,
       postJob, releaseJob, updateReleasedJob, removeReleasedJob, applyForJob, getJobsForEmployer, getJobsForWorker, updateJobStatus,
-      acceptJob, verifyAttendanceCode,
+      acceptJob, verifyAttendanceCode, isJobAccepted: (job) => isAcceptedJobStatus(job?.status), getJobVerificationCode: getStoredJobVerificationCode,
       addHiringDetail, getHiringDetailsForWorker, getHiringDetailsForEmployer,
       getCities, getLocalities,
       deleteJob, clearCompletedJobs,

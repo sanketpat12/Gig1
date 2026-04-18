@@ -195,7 +195,7 @@ function FindJobsTab({ openJobs, appliedJobs, setAppliedJobs, showToast, applyFo
 
 // ── Main Worker Dashboard component ──────────────────────────────────────────
 export default function WorkerDashboard() {
-  const { currentUser, updateUser, getReviewsForWorker, getAvgRating, jobs, releasedJobs, applyForJob, updateJobStatus, acceptJob, getUserById, deleteJob, clearCompletedJobs, getSchedulesForWorker, updateScheduleStatus, updateAvailableSlots } = useAuth();
+  const { currentUser, updateUser, getReviewsForWorker, getAvgRating, jobs, releasedJobs, applyForJob, updateJobStatus, acceptJob, getUserById, deleteJob, clearCompletedJobs, getSchedulesForWorker, updateScheduleStatus, updateAvailableSlots, isJobAccepted, getJobVerificationCode } = useAuth();
 
   const [activeTab,    setActiveTab]    = useState('overview');
   const [toast,        setToast]        = useState(null);
@@ -210,7 +210,7 @@ export default function WorkerDashboard() {
   const myJobs       = (jobs || []).filter(j => j.workerId === currentUser.id);
   const completedJobs = myJobs.filter(j => j.status === 'completed');
   const pendingJobs  = myJobs.filter(j => j.status === 'open');
-  const acceptedJobs = myJobs.filter(j => j.status?.startsWith('accepted_'));
+  const acceptedJobs = myJobs.filter(j => isJobAccepted(j));
   const verifiedJobs = myJobs.filter(j => j.status === 'verified');
 
   const completionScore = useMemo(() => {
@@ -511,8 +511,12 @@ export default function WorkerDashboard() {
                     <div style={{ display:'flex', gap:'8px', marginTop:'10px' }}>
                       <button className="btn btn-success btn-sm" style={{ flex:1 }}
                         onClick={async () => {
-                          const code = await acceptJob(j.id);
-                          showToast(`Accepted! Your arrival code is ${code}. Show this to the employer when you reach the location.`);
+                          const result = await acceptJob(j.id);
+                          if (result.success) {
+                            showToast(`Accepted! Your arrival code is ${result.code}. Show this to the employer when you reach the location.`);
+                          } else {
+                            showToast(result.message, 'error');
+                          }
                         }}>
                         <CheckCircle size={13}/> Accept
                       </button>
@@ -535,7 +539,7 @@ export default function WorkerDashboard() {
               </h3>
               <div className="wd-jobs-list">
                 {acceptedJobs.map(j => {
-                  const code = j.status?.startsWith('accepted_') ? j.status.split('_')[1] : j.verifyCode;
+                  const code = getJobVerificationCode(j);
                   const employer = getUserById(j.employerId);
                   return (
                     <div key={j.id} className="wd-job-card" style={{ borderLeft:'4px solid #7c3aed', padding:'16px' }}>
@@ -545,7 +549,7 @@ export default function WorkerDashboard() {
                         </div>
                         <div>
                           <p style={{ fontWeight:700, fontSize:'0.9rem' }}>{j.employerName}</p>
-                          <p style={{ fontSize:'0.75rem', color:'var(--text-muted)' }}>Tell this code to your employer for attendance</p>
+                          <p style={{ fontSize:'0.75rem', color:'var(--text-muted)' }}>Show this code to your employer when you reach the location</p>
                         </div>
                         <span className="badge" style={{ background:'#7c3aed22', color:'#7c3aed', border:'1px solid #7c3aed44', marginLeft:'auto' }}>🟣 Accepted</span>
                       </div>
@@ -569,7 +573,7 @@ export default function WorkerDashboard() {
                       </div>
 
                       <div style={{ textAlign:'center', padding:'16px', background:'linear-gradient(135deg,rgba(124,58,237,0.08),rgba(167,139,250,0.08))', borderRadius:'12px' }}>
-                        <p style={{ fontSize:'0.75rem', color:'var(--text-muted)', marginBottom:'6px', textTransform:'uppercase', letterSpacing:'1px', fontWeight:600 }}>Your Verification Code</p>
+                        <p style={{ fontSize:'0.75rem', color:'var(--text-muted)', marginBottom:'6px', textTransform:'uppercase', letterSpacing:'1px', fontWeight:600 }}>Your Arrival Code</p>
                         <p style={{ fontSize:'2rem', fontWeight:900, color:'#7c3aed', letterSpacing:'8px', fontFamily:'monospace' }}>{code}</p>
                         <p style={{ fontSize:'0.7rem', color:'var(--text-muted)', marginTop:'8px' }}>⚠️ Do not share this until you reach the work location</p>
                       </div>

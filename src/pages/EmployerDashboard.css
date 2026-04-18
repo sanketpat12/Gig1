@@ -80,6 +80,81 @@
   gap: 20px;
 }
 
+.emp-posts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.emp-post-card {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.emp-post-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.emp-post-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.emp-post-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.emp-post-date {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.emp-post-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.emp-post-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.emp-post-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(41, 98, 255, 0.06);
+  border: 1px solid rgba(41, 98, 255, 0.12);
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+
+.emp-post-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.emp-post-actions > * {
+  flex: 1;
+}
+
 /* Empty state */
 .empty-state {
   padding: 64px 24px;
@@ -177,4 +252,5 @@
 @media (max-width: 640px) {
   .worktype-grid { grid-template-columns: 1fr; max-width: 400px; }
   .emp-toolbar { flex-direction: column; align-items: flex-start; }
+  .emp-post-actions { flex-direction: column; }
 }

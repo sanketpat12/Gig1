@@ -12,4 +12,16 @@ if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('placeholder')) {
   console.warn('Supabase credentials missing! Please check your credentials.');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Supabase can use the browser LockManager for auth session coordination.
+// In this app it has been causing login/session restore hangs in some browsers,
+// so we use a simple in-process lock instead.
+const authLockNoOp = async (_name, _acquireTimeout, fn) => fn();
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    lock: authLockNoOp,
+  },
+});

@@ -5,36 +5,24 @@ import { Briefcase, CheckCircle, Loader2 } from 'lucide-react';
 import './Auth.css';
 
 export default function ConfirmEmail() {
-  const { currentUser } = useAuth();
+  const { currentUser, loading } = useAuth();
   const navigate = useNavigate();
-  const [status, setStatus] = useState('verifying'); // verifying | success | error
+  const [showError, setShowError] = useState(false);
+  const status = loading ? 'verifying' : currentUser ? 'success' : showError ? 'error' : 'verifying';
 
   useEffect(() => {
-    // Give the auth state listener time to process the token from the URL
+    if (loading) return undefined;
+
     const timer = setTimeout(() => {
       if (currentUser) {
-        setStatus('success');
-        // Redirect to appropriate dashboard after short delay
-        setTimeout(() => {
-          navigate(currentUser.role === 'employer' ? '/employer' : '/worker', { replace: true });
-        }, 2000);
+        navigate(currentUser.role === 'employer' ? '/employer' : '/worker', { replace: true });
       } else {
-        setStatus('error');
+        setShowError(true);
       }
-    }, 3000);
+    }, currentUser ? 1200 : 1800);
 
     return () => clearTimeout(timer);
-  }, [currentUser, navigate]);
-
-  // If user logs in while on this page, redirect immediately
-  useEffect(() => {
-    if (currentUser && status !== 'success') {
-      setStatus('success');
-      setTimeout(() => {
-        navigate(currentUser.role === 'employer' ? '/employer' : '/worker', { replace: true });
-      }, 2000);
-    }
-  }, [currentUser, status, navigate]);
+  }, [currentUser, loading, navigate]);
 
   return (
     <div className="auth-page">

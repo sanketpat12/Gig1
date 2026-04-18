@@ -5,7 +5,7 @@ import { Briefcase, LogOut, User, Home, Search, Menu, X } from 'lucide-react';
 import './Navbar.css';
 
 export default function Navbar() {
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -48,7 +48,9 @@ export default function Navbar() {
 
         {/* Auth Buttons / User */}
         <div className="navbar-auth">
-          {currentUser ? (
+          {loading ? (
+            <div style={{ minWidth: '150px', height: '40px' }} />
+          ) : currentUser ? (
             <div className="navbar-user">
               <div className="user-chip">
                 <div className="avatar avatar-sm" style={{ background: currentUser.role === 'employer' ? 'linear-gradient(135deg,var(--primary),var(--primary-dark))' : 'linear-gradient(135deg,#43e97b,#38f9d7)', fontSize:'0.8rem' }}>
@@ -89,14 +91,14 @@ export default function Navbar() {
           {currentUser?.role === 'worker' && (
             <Link to="/worker" className="mobile-link" onClick={() => setMenuOpen(false)}>My Dashboard</Link>
           )}
-          {currentUser ? (
+          {!loading && currentUser ? (
             <button className="mobile-link" onClick={handleLogout}>Logout</button>
-          ) : (
+          ) : !loading ? (
             <>
               <Link to="/login" className="mobile-link" onClick={() => setMenuOpen(false)}>Login</Link>
               <Link to="/register" className="mobile-link" onClick={() => setMenuOpen(false)}>Sign Up</Link>
             </>
-          )}
+          ) : null}
         </div>
       )}
     </nav>

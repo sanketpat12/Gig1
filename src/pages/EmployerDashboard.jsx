@@ -2,19 +2,15 @@ import { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import WorkerCard from '../components/WorkerCard';
 import ReviewModal from '../components/ReviewModal';
-import { Search, MapPin, Filter, Briefcase, Home, Building2, SlidersHorizontal, X, PlusCircle, Bell, CheckCircle, Users, ShieldCheck, Hash, Calendar, CalendarCheck, CalendarX, CalendarClock } from 'lucide-react';
+import { Search, MapPin, Briefcase, SlidersHorizontal, X, PlusCircle, Bell, CheckCircle, Users, ShieldCheck, Hash, Calendar, CalendarCheck, CalendarX, CalendarClock, Edit3, Trash2, Clock3, IndianRupee } from 'lucide-react';
 import './EmployerDashboard.css';
 
-const WORK_TYPE_OPTIONS = [
-  { val: 'home',     label: 'Home / Personal', icon: <Home size={20}/>,      desc: 'Domestic help, repairs, cooking, cleaning for your home or family.', color: 'var(--success)' },
-];
-
 export default function EmployerDashboard() {
-  const { currentUser, getWorkers, getCities, getLocalities, postJob, releaseJob, removeReleasedJob, getJobsForEmployer, updateJobStatus, getWorkerById, verifyAttendanceCode, getUserById, deleteJob, clearCompletedJobs, createSchedule, getSchedulesForEmployer, refreshWorkers } = useAuth();
+  const { currentUser, getWorkers, getCities, getLocalities, postJob, releasedJobs, releaseJob, updateReleasedJob, removeReleasedJob, getJobsForEmployer, updateJobStatus, getWorkerById, verifyAttendanceCode, getUserById, deleteJob, clearCompletedJobs, createSchedule, getSchedulesForEmployer, refreshWorkers } = useAuth();
 
   /* Work type selection - Persist in sessionStorage so 'back' button doesn't reset it */
   /* Default to 'home' as home use is removed */
-  const [workType, setWorkType] = useState('home');
+  const workType = 'home';
 
   /* Search / filter */
   const [city, setCity]           = useState(() => sessionStorage.getItem('gig_emp_city') || '');
@@ -28,11 +24,12 @@ export default function EmployerDashboard() {
   
   /* Release job modal */
   const [showReleaseModal, setShowReleaseModal] = useState(false);
+  const [editingReleasedJob, setEditingReleasedJob] = useState(null);
   
   /* Applicant Detail modal - Persist its ID so modal re-opens after pressing 'back' */
   const [selectedAppId, setSelectedAppId] = useState(() => sessionStorage.getItem('gig_emp_applicant_id') || null);
   
-  /* View toggle: 'browse' or 'hired' */
+  /* View toggle: 'browse' | 'posts' | 'hired' | 'schedules' */
   const [empView, setEmpView] = useState('browse');
   
   /* Verification code inputs for each job */
@@ -57,14 +54,13 @@ export default function EmployerDashboard() {
 
   // Sync state to sessionStorage whenever it changes
   useEffect(() => {
-    if (workType) sessionStorage.setItem('gig_emp_workType', workType); else sessionStorage.removeItem('gig_emp_workType');
     if (city) sessionStorage.setItem('gig_emp_city', city); else sessionStorage.removeItem('gig_emp_city');
     if (locality) sessionStorage.setItem('gig_emp_locality', locality); else sessionStorage.removeItem('gig_emp_locality');
     if (skill) sessionStorage.setItem('gig_emp_skill', skill); else sessionStorage.removeItem('gig_emp_skill');
     if (availability) sessionStorage.setItem('gig_emp_avail', availability); else sessionStorage.removeItem('gig_emp_avail');
     if (selectedAppId) sessionStorage.setItem('gig_emp_applicant_id', selectedAppId); else sessionStorage.removeItem('gig_emp_applicant_id');
     sessionStorage.setItem('gig_emp_showFilters', showFilters);
-  }, [workType, city, locality, skill, availability, showFilters, selectedAppId]);
+  }, [city, locality, skill, availability, showFilters, selectedAppId]);
 
   const cities = getCities();
   const localities = city ? getLocalities(city) : [];
@@ -73,6 +69,13 @@ export default function EmployerDashboard() {
     if (!workType) return [];
     return getWorkers({ jobType: workType, city, locality, skill, availability });
   }, [workType, city, locality, skill, availability, getWorkers]);
+
+  const myReleasedJobs = useMemo(
+    () => [...(releasedJobs || [])]
+      .filter(job => job.employerId === currentUser.id)
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)),
+    [releasedJobs, currentUser.id]
+  );
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -84,6 +87,18 @@ export default function EmployerDashboard() {
   // Pending worker applications to open jobs
   const employerJobs = getJobsForEmployer(currentUser?.id);
   const pendingApplications = employerJobs.filter(j => j.status === 'applied');
+  const pendingApplicationsByReleasedJob = useMemo(
+    () => pendingApplications.reduce((acc, application) => {
+      if (!application.id?.includes('_rjob_')) return acc;
+
+      const releasedJobId = application.id.split('_rjob_')[1];
+      if (!releasedJobId) return acc;
+
+      acc[releasedJobId] = (acc[releasedJobId] || 0) + 1;
+      return acc;
+    }, {}),
+    [pendingApplications]
+  );
   
   // Reconstruct selectedApplicant from persisted ID
   const selectedApplicantApp = pendingApplications.find(a => a.id === selectedAppId);
@@ -145,7 +160,10 @@ export default function EmployerDashboard() {
           )}
           <button
             className="btn btn-primary btn-sm"
-            onClick={() => setShowReleaseModal(true)}
+            onClick={() => {
+              setEditingReleasedJob(null);
+              setShowReleaseModal(true);
+            }}
           >
             <PlusCircle size={15}/> Post Open Job
           </button>
@@ -160,7 +178,7 @@ export default function EmployerDashboard() {
         </div>
       </div>
 
-      {/* View Switcher: Browse Workers | Hired Workers | My Schedules */}
+      {/* View Switcher: Browse Workers | My Posts | Hired Workers | My Schedules */}
       <div className="glass-card" style={{ display:'flex', gap:'4px', padding:'4px', marginBottom:'20px', flexWrap:'wrap' }}>
         <button
           className={`btn btn-sm ${empView === 'browse' ? 'btn-primary' : 'btn-secondary'}`}
@@ -168,6 +186,18 @@ export default function EmployerDashboard() {
           onClick={() => setEmpView('browse')}
         >
           <Search size={14}/> Browse Workers
+        </button>
+        <button
+          className={`btn btn-sm ${empView === 'posts' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{ flex:1, borderRadius:'8px', position:'relative', minWidth:'100px' }}
+          onClick={() => setEmpView('posts')}
+        >
+          <Briefcase size={14}/> My Posts
+          {myReleasedJobs.length > 0 && (
+            <span style={{ position:'absolute', top:'-4px', right:'-4px', background:'var(--primary)', color:'#fff', borderRadius:'50%', width:'18px', height:'18px', fontSize:'0.65rem', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700 }}>
+              {myReleasedJobs.length}
+            </span>
+          )}
         </button>
         <button
           className={`btn btn-sm ${empView === 'hired' ? 'btn-primary' : 'btn-secondary'}`}
@@ -375,6 +405,114 @@ export default function EmployerDashboard() {
       )}
 
       {/* ──── HIRED WORKERS VIEW ──── */}
+      {empView === 'posts' && (
+        <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
+          {myReleasedJobs.length === 0 ? (
+            <div className="glass-card" style={{ textAlign:'center', padding:'56px 20px' }}>
+              <Briefcase size={52} style={{ color:'var(--text-muted)', margin:'0 auto 14px', opacity:0.25 }}/>
+              <h3 style={{ color:'var(--text-secondary)', fontWeight:700, marginBottom:'8px' }}>No posted jobs yet</h3>
+              <p style={{ color:'var(--text-muted)', fontSize:'0.85rem', marginBottom:'18px' }}>
+                Post an open job to attract workers, then manage it here.
+              </p>
+              <button className="btn btn-primary btn-sm" onClick={() => {
+                setEditingReleasedJob(null);
+                setShowReleaseModal(true);
+              }}>
+                <PlusCircle size={14}/> Post Open Job
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="glass-card" style={{ padding:'18px 20px', display:'flex', justifyContent:'space-between', alignItems:'center', gap:'12px', flexWrap:'wrap' }}>
+                <div>
+                  <h2 style={{ fontSize:'1.05rem', fontWeight:800, marginBottom:'4px' }}>Manage Your Posted Jobs</h2>
+                  <p style={{ color:'var(--text-muted)', fontSize:'0.83rem' }}>
+                    Edit details, remove old posts, and track incoming applications from workers.
+                  </p>
+                </div>
+                <button className="btn btn-primary btn-sm" onClick={() => {
+                  setEditingReleasedJob(null);
+                  setShowReleaseModal(true);
+                }}>
+                  <PlusCircle size={14}/> New Post
+                </button>
+              </div>
+
+              <div className="emp-posts-grid">
+                {myReleasedJobs.map(job => {
+                  const applicantCount = pendingApplicationsByReleasedJob[job.id] || 0;
+
+                  return (
+                    <div key={job.id} className="glass-card emp-post-card">
+                      <div className="emp-post-top">
+                        <div>
+                          <div className="emp-post-title-row">
+                            <h3 className="emp-post-title">{job.title}</h3>
+                            <span className={`badge ${applicantCount > 0 ? 'badge-primary' : 'badge-success'}`}>
+                              {applicantCount > 0 ? `${applicantCount} Applicant${applicantCount > 1 ? 's' : ''}` : 'Open'}
+                            </span>
+                          </div>
+                          <p className="emp-post-date">
+                            Posted {job.createdAt ? new Date(job.createdAt).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }) : 'recently'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="emp-post-meta">
+                        <span><MapPin size={13}/> {job.location || 'Location not set'}</span>
+                        <span><Clock3 size={13}/> {job.duration || 'Duration not set'}</span>
+                        <span><IndianRupee size={13}/> {job.budget || 'Negotiable'}</span>
+                      </div>
+
+                      <div style={{ display:'flex', flexWrap:'wrap', gap:'6px', marginBottom:'14px' }}>
+                        {(job.skills || []).length > 0
+                          ? job.skills.map(skillTag => <span key={skillTag} className="tag">{skillTag}</span>)
+                          : <span style={{ color:'var(--text-muted)', fontSize:'0.82rem' }}>No required skills added</span>}
+                      </div>
+
+                      {applicantCount > 0 && (
+                        <div className="emp-post-note">
+                          <Bell size={14} style={{ color:'var(--primary)' }}/>
+                          <span>{applicantCount} worker application{applicantCount > 1 ? 's are' : ' is'} waiting in Browse Workers.</span>
+                        </div>
+                      )}
+
+                      <div className="emp-post-actions">
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => {
+                            setEditingReleasedJob(job);
+                            setShowReleaseModal(true);
+                          }}
+                        >
+                          <Edit3 size={14}/> Edit
+                        </button>
+                        <button
+                          className="btn btn-danger btn-sm"
+                          onClick={async () => {
+                            const confirmed = window.confirm(
+                              applicantCount > 0
+                                ? 'Delete this post? Pending applications for it will also be removed.'
+                                : 'Delete this posted job?'
+                            );
+                            if (!confirmed) return;
+
+                            await removeReleasedJob(job.id);
+                            showToast(`"${job.title}" deleted successfully.`);
+                          }}
+                        >
+                          <Trash2 size={14}/> Delete
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
       {empView === 'hired' && (
         <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
           {hiredJobs.length === 0 ? (
@@ -799,11 +937,21 @@ export default function EmployerDashboard() {
       {/* Release Job Modal */}
       {showReleaseModal && (
         <ReleaseJobModal
-          onClose={() => setShowReleaseModal(false)}
-          onRelease={async (jobData) => {
-            await releaseJob({ ...jobData, employerId: currentUser.id, employerName: currentUser.name });
+          initialData={editingReleasedJob}
+          onClose={() => {
             setShowReleaseModal(false);
-            showToast('Job released successfully! Workers can now find and apply for it.');
+            setEditingReleasedJob(null);
+          }}
+          onRelease={async (jobData) => {
+            if (editingReleasedJob) {
+              await updateReleasedJob({ ...editingReleasedJob, ...jobData, employerId: currentUser.id, employerName: currentUser.name });
+              showToast('Job post updated successfully!');
+            } else {
+              await releaseJob({ ...jobData, employerId: currentUser.id, employerName: currentUser.name });
+              showToast('Job released successfully! Workers can now find and apply for it.');
+            }
+            setShowReleaseModal(false);
+            setEditingReleasedJob(null);
           }}
         />
       )}
@@ -831,14 +979,15 @@ export default function EmployerDashboard() {
 }
 
 // ── RELEASE JOB MODAL ────────────────────────────────────────────────────────
-function ReleaseJobModal({ onClose, onRelease }) {
+function ReleaseJobModal({ onClose, onRelease, initialData = null }) {
+  const isEditing = Boolean(initialData);
   const [formData, setFormData] = useState({
-    title: '',
-    typeOfWork: 'home',
-    duration: '',
-    budget: '',
-    location: '',
-    skills: '' // Comma separated
+    title: initialData?.title || '',
+    typeOfWork: initialData?.typeOfWork || 'home',
+    duration: initialData?.duration || '',
+    budget: initialData?.budget || '',
+    location: initialData?.location || '',
+    skills: Array.isArray(initialData?.skills) ? initialData.skills.join(', ') : '' // Comma separated
   });
 
   const handleSubmit = (e) => {
@@ -854,12 +1003,14 @@ function ReleaseJobModal({ onClose, onRelease }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content glass-card animate-fadeInUp" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
         <div className="modal-header">
-          <h2 style={{ fontSize: '1.25rem' }}>Release an Open Job</h2>
+          <h2 style={{ fontSize: '1.25rem' }}>{isEditing ? 'Edit Job Post' : 'Release an Open Job'}</h2>
           <button className="btn-icon" onClick={onClose}><X size={20}/></button>
         </div>
 
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '20px' }}>
-          Post a job describing what you need. Workers will see it in their dashboard and can apply directly.
+          {isEditing
+            ? 'Update your posted job details. Workers will see the latest version in their dashboard.'
+            : 'Post a job describing what you need. Workers will see it in their dashboard and can apply directly.'}
         </p>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -902,7 +1053,9 @@ function ReleaseJobModal({ onClose, onRelease }) {
 
           <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
             <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Post Job</button>
+            <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>
+              {isEditing ? 'Save Changes' : 'Post Job'}
+            </button>
           </div>
         </form>
       </div>

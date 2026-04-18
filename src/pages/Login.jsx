@@ -35,13 +35,14 @@ export default function Login() {
     setError('');
     if (!email || !password) { setError('Please fill in all fields.'); return; }
     setLoading(true);
-    setTimeout(() => {
-      login(email, password, role).then(result => {
-        setLoading(false);
-        if (!result.success) { setError(result.message); return; }
-        navigate(role === 'employer' ? '/employer' : '/worker');
-      });
-    }, 600);
+
+    try {
+      const result = await login(email, password, role);
+      if (!result.success) { setError(result.message); return; }
+      navigate(role === 'employer' ? '/employer' : '/worker');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleVoiceGuide = async (transcript) => {

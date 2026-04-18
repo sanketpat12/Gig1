@@ -229,7 +229,7 @@ CRITICAL RULES:
     setStep(s => s + 1);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     if (role === 'worker' && !validateStep3Worker()) return;
@@ -245,19 +245,19 @@ CRITICAL RULES:
           availability: 'available',
         };
 
-    setTimeout(() => {
-      register(data).then(result => {
-        setLoading(false);
-        if (result.confirmEmail) {
-          // Show email confirmation pending screen
-          setConfirmEmail(true);
-          setConfirmEmailAddress(email);
-          return;
-        }
-        if (!result.success) { setError(result.message); return; }
-        navigate(role === 'employer' ? '/employer' : '/worker');
-      });
-    }, 600);
+    try {
+      const result = await register(data);
+      if (result.confirmEmail) {
+        // Show email confirmation pending screen
+        setConfirmEmail(true);
+        setConfirmEmailAddress(email);
+        return;
+      }
+      if (!result.success) { setError(result.message); return; }
+      navigate(role === 'employer' ? '/employer' : '/worker');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ── EMAIL CONFIRMATION PENDING SCREEN ─────────────────────────────────────────

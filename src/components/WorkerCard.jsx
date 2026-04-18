@@ -99,17 +99,40 @@ export default function WorkerCard({ worker, onHire, onSchedule, onReview, showA
         </Link>
         {showActions && (
           <>
-            {onSchedule && (
-              <button id={`sched-btn-${worker.id}`} className="btn btn-sm sched-worker-btn" onClick={() => onSchedule(worker)}>
-                <Calendar size={13} /> Schedule
-              </button>
+            {worker.availability !== 'available' ? (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 14px',
+                  borderRadius: '8px',
+                  background: 'rgba(239,68,68,0.08)',
+                  border: '1px solid rgba(239,68,68,0.2)',
+                  color: '#ef4444',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  flex: 1,
+                  justifyContent: 'center',
+                }}
+              >
+                🔴 Currently Busy — Not accepting work
+              </div>
+            ) : (
+              <>
+                {onSchedule && (
+                  <button id={`sched-btn-${worker.id}`} className="btn btn-sm sched-worker-btn" onClick={() => onSchedule(worker)}>
+                    <Calendar size={13} /> Schedule
+                  </button>
+                )}
+                {onHire && (
+                  <button id={`hire-btn-${worker.id}`} className="btn btn-primary btn-sm" onClick={() => onHire(worker)}>
+                    Hire Now
+                  </button>
+                )}
+              </>
             )}
-            {onHire && worker.availability === 'available' && (
-              <button id={`hire-btn-${worker.id}`} className="btn btn-primary btn-sm" onClick={() => onHire(worker)}>
-                Hire Now
-              </button>
-            )}
-            {onReview && hasHired && (
+            {onReview && hasHired && worker.availability === 'available' && (
               <button id={`review-btn-${worker.id}`} className="btn btn-warning btn-sm" onClick={() => onReview(worker)}>
                 <Star size={13} /> Review
               </button>

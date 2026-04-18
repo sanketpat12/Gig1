@@ -88,16 +88,38 @@ export default function WorkerProfile() {
             {/* Action Buttons */}
             {currentUser?.role === 'employer' && (
               <div style={{ display:'flex', flexDirection:'column', gap:'10px', width:'100%', marginTop:'8px' }}>
-                <button
-                  id="hire-worker-btn"
-                  className="btn btn-primary"
-                  onClick={async () => {
-                    await postJob({ employerId: currentUser.id, workerId: worker.id, workerName: worker.name, employerName: currentUser.name });
-                    showToast(`Hire request sent to ${worker.name}!`);
-                  }}
-                >
-                  <CheckCircle size={16}/> Hire {worker.name.split(' ')[0]}
-                </button>
+                {worker.availability !== 'available' ? (
+                  <div style={{
+                    display:'flex',
+                    alignItems:'center',
+                    justifyContent:'center',
+                    gap:'8px',
+                    padding:'14px',
+                    borderRadius:'12px',
+                    background:'rgba(239,68,68,0.08)',
+                    border:'1px solid rgba(239,68,68,0.25)',
+                    color:'#ef4444',
+                    fontWeight:700,
+                    fontSize:'0.88rem',
+                    textAlign:'center',
+                  }}>
+                    🔴 Currently Busy
+                    <span style={{ fontWeight:400, color:'#b91c1c', fontSize:'0.8rem', display:'block', marginTop:'4px' }}>
+                      This worker is not accepting new jobs right now.
+                    </span>
+                  </div>
+                ) : (
+                  <button
+                    id="hire-worker-btn"
+                    className="btn btn-primary"
+                    onClick={async () => {
+                      await postJob({ employerId: currentUser.id, workerId: worker.id, workerName: worker.name, employerName: currentUser.name });
+                      showToast(`Hire request sent to ${worker.name}!`);
+                    }}
+                  >
+                    <CheckCircle size={16}/> Hire {worker.name.split(' ')[0]}
+                  </button>
+                )}
                 {hasHired && (
                   <button
                     id="write-review-btn"

@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS hiring_details (
   createdAt    TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Row Level Security (RLS) - Basic Enablement
+-- Row Level Security (RLS)
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE released_jobs ENABLE ROW LEVEL SECURITY;
@@ -98,4 +98,19 @@ ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE schedules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE hiring_details ENABLE ROW LEVEL SECURITY;
 
--- Note: Add specific policies for auth.uid() if production deployment is needed.
+-- Permissive policies: allow all operations for all users (anon + authenticated)
+-- Required for the app to read/write data without login-based row filtering
+DROP POLICY IF EXISTS "allow_all_users" ON users;
+DROP POLICY IF EXISTS "allow_all_jobs" ON jobs;
+DROP POLICY IF EXISTS "allow_all_released_jobs" ON released_jobs;
+DROP POLICY IF EXISTS "allow_all_reviews" ON reviews;
+DROP POLICY IF EXISTS "allow_all_schedules" ON schedules;
+DROP POLICY IF EXISTS "allow_all_hiring_details" ON hiring_details;
+
+CREATE POLICY "allow_all_users" ON users FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_jobs" ON jobs FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_released_jobs" ON released_jobs FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_reviews" ON reviews FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_schedules" ON schedules FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_hiring_details" ON hiring_details FOR ALL USING (true) WITH CHECK (true);
+

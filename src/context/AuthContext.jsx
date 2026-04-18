@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 
 const AuthContext = createContext(null);
@@ -56,7 +56,8 @@ const DEFAULT_USER_IDS = new Set(DEFAULT_USERS.map((user) => user.id));
 const DEMO_USER_STORAGE_KEY = 'gig_demo_user';
 const AUTH_BOOTSTRAP_TIMEOUT_MS = 4000;
 const AUTH_REQUEST_TIMEOUT_MS = 15000;
-const REMOTE_SYNC_INTERVAL_MS = 4000;
+const REMOTE_SYNC_INTERVAL_MS = 1000;
+const JOB_MUTATION_GRACE_MS = 8000;
 
 const DEFAULT_REVIEWS = [
   { id: 'r1', workerId: 'w1', employerId: 'e-demo', employerName: 'Demo Employer', rating: 5, comment: 'Rajesh fixed our kitchen sink perfectly! Very professional.', date: '2024-03-10' },
@@ -226,6 +227,17 @@ const extractVerificationCode = (status) =>
 const generateVerificationCode = () =>
   String(Math.floor(1000 + Math.random() * 9000));
 
+const getJobStatusPriority = (status) => {
+  if (!status) return 0;
+  if (status === 'applied') return 1;
+  if (status === 'open') return 2;
+  if (status.startsWith('accepted_')) return 3;
+  if (status === 'verified') return 4;
+  if (status === 'completed') return 5;
+  if (status === 'rejected') return 6;
+  return 0;
+};
+
 // Helper: keep the payload aligned with the columns the app actively depends on.
 const buildDbPayload = (userData) => {
   const payload = {
@@ -276,10 +288,20 @@ export function AuthProvider({ children }) {
   const [hiringDetails, setHiringDetails] = useState([]);
   const [schedules, setSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
+  const recentJobMutationsRef = useRef(new Map());
 
   const syncCurrentUser = (user) => {
     setCurrentUser(user);
     persistDemoUser(user);
+  };
+
+  const rememberJobMutation = (jobId, patch = {}) => {
+    if (!jobId) return;
+
+    recentJobMutationsRef.current.set(jobId, {
+      timestamp: Date.now(),
+      patch,
+    });
   };
 
   // Load ALL data from Supabase on mount
@@ -453,7 +475,43 @@ export function AuthProvider({ children }) {
         setUsers(mergeUsersById(DEFAULT_USERS, dbUsers, currentUser));
       }
 
-      if (dbJobs) setJobs(dbJobs);
+      if (dbJobs) {
+        setJobs((prev) => {
+          const now = Date.now();
+          const localJobsById = new Map(prev.map((job) => [job.id, job]));
+
+          return dbJobs.map((remoteJob) => {
+            const mutation = recentJobMutationsRef.current.get(remoteJob.id);
+            if (!mutation) return remoteJob;
+
+            if (now - mutation.timestamp > JOB_MUTATION_GRACE_MS) {
+              recentJobMutationsRef.current.delete(remoteJob.id);
+              return remoteJob;
+            }
+
+            const localJob = localJobsById.get(remoteJob.id);
+            if (!localJob) return remoteJob;
+
+            const localStatus = localJob.status;
+            const remoteStatus = remoteJob.status;
+            const keepLocalStatus =
+              localStatus &&
+              localStatus !== remoteStatus &&
+              getJobStatusPriority(localStatus) > getJobStatusPriority(remoteStatus);
+
+            if (!keepLocalStatus) return remoteJob;
+
+            return {
+              ...remoteJob,
+              ...mutation.patch,
+              status: localStatus,
+              verifyCode: localJob.verifyCode ?? remoteJob.verifyCode,
+              verifiedAt: localJob.verifiedAt ?? remoteJob.verifiedAt,
+            };
+          });
+        });
+      }
+
       if (dbReleasedJobs) setReleasedJobs(dbReleasedJobs);
       if (dbSchedules) setSchedules(dbSchedules);
     };
@@ -857,6 +915,7 @@ export function AuthProvider({ children }) {
     try {
       await supabase.from('jobs').update({ status, ...extra }).eq('id', jobId);
     } catch (e) { console.warn('Supabase error on updateJobStatus', e); }
+    rememberJobMutation(jobId, { status, ...extra });
     setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status, ...extra } : j));
   };
 
@@ -893,6 +952,7 @@ export function AuthProvider({ children }) {
       if (error) console.warn('Supabase error on acceptJob:', error.message);
     } catch (e) { console.warn('Supabase error on acceptJob', e); }
     
+    rememberJobMutation(jobId, { status: statusWithCode, verifyCode: code });
     setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: statusWithCode, verifyCode: code } : j));
     return code;
   };
@@ -932,6 +992,7 @@ export function AuthProvider({ children }) {
       try {
         await supabase.from('jobs').update({ status: 'verified' }).eq('id', jobId);
       } catch (e) { console.warn('Supabase error on verifyAttendanceCode', e); }
+      rememberJobMutation(jobId, { status: 'verified', verifiedAt: new Date().toISOString() });
       setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: 'verified', verifiedAt: new Date().toISOString() } : j));
       return { success: true, message: 'Worker arrival confirmed. Attendance marked successfully.' };
     }

@@ -56,6 +56,7 @@ const DEFAULT_USER_IDS = new Set(DEFAULT_USERS.map((user) => user.id));
 const DEMO_USER_STORAGE_KEY = 'gig_demo_user';
 const AUTH_BOOTSTRAP_TIMEOUT_MS = 4000;
 const AUTH_REQUEST_TIMEOUT_MS = 15000;
+const REMOTE_SYNC_INTERVAL_MS = 4000;
 
 const DEFAULT_REVIEWS = [
   { id: 'r1', workerId: 'w1', employerId: 'e-demo', employerName: 'Demo Employer', rating: 5, comment: 'Rajesh fixed our kitchen sink perfectly! Very professional.', date: '2024-03-10' },
@@ -138,6 +139,21 @@ const safeSelectTable = async (table) => {
   } catch (error) {
     console.warn(`Failed to load ${table} from Supabase:`, error);
     return [];
+  }
+};
+
+const safeSelectTableSnapshot = async (table) => {
+  try {
+    const { data, error } = await supabase.from(table).select('*');
+    if (error) {
+      console.warn(`Failed to sync ${table} from Supabase:`, error.message);
+      return null;
+    }
+
+    return data ?? [];
+  } catch (error) {
+    console.warn(`Failed to sync ${table} from Supabase:`, error);
+    return null;
   }
 };
 
@@ -415,6 +431,54 @@ export function AuthProvider({ children }) {
       delete window.__gigSetLoggingOut;
     };
   }, []);
+
+  useEffect(() => {
+    if (!currentUser || isDemoUserId(currentUser.id) || typeof window === 'undefined') {
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    const syncRemoteState = async () => {
+      const [dbUsers, dbJobs, dbReleasedJobs, dbSchedules] = await Promise.all([
+        withTimeout(safeSelectTableSnapshot('users'), null, 'Supabase users sync'),
+        withTimeout(safeSelectTableSnapshot('jobs'), null, 'Supabase jobs sync'),
+        withTimeout(safeSelectTableSnapshot('released_jobs'), null, 'Supabase released jobs sync'),
+        withTimeout(safeSelectTableSnapshot('schedules'), null, 'Supabase schedules sync'),
+      ]);
+
+      if (cancelled) return;
+
+      if (dbUsers) {
+        setUsers(mergeUsersById(DEFAULT_USERS, dbUsers, currentUser));
+      }
+
+      if (dbJobs) setJobs(dbJobs);
+      if (dbReleasedJobs) setReleasedJobs(dbReleasedJobs);
+      if (dbSchedules) setSchedules(dbSchedules);
+    };
+
+    const triggerSync = () => {
+      void syncRemoteState();
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) triggerSync();
+    };
+
+    triggerSync();
+
+    const intervalId = window.setInterval(triggerSync, REMOTE_SYNC_INTERVAL_MS);
+    window.addEventListener('focus', triggerSync);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', triggerSync);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [currentUser?.id]);
 
   const login = async (email, password, role) => {
     // Demo accounts (not in Supabase Auth)

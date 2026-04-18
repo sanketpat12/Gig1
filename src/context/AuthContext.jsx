@@ -487,11 +487,12 @@ export function AuthProvider({ children }) {
     let cancelled = false;
 
     const syncRemoteState = async () => {
-      const [dbUsers, dbJobs, dbReleasedJobs, dbSchedules] = await Promise.all([
+      const [dbUsers, dbJobs, dbReleasedJobs, dbSchedules, dbReviews] = await Promise.all([
         withTimeout(safeSelectTableSnapshot('users'), null, 'Supabase users sync'),
         withTimeout(safeSelectTableSnapshot('jobs'), null, 'Supabase jobs sync'),
         withTimeout(safeSelectTableSnapshot('released_jobs'), null, 'Supabase released jobs sync'),
         withTimeout(safeSelectTableSnapshot('schedules'), null, 'Supabase schedules sync'),
+        withTimeout(safeSelectTableSnapshot('reviews'), null, 'Supabase reviews sync'),
       ]);
 
       if (cancelled) return;
@@ -557,6 +558,7 @@ export function AuthProvider({ children }) {
 
       if (dbReleasedJobs) setReleasedJobs(dbReleasedJobs);
       if (dbSchedules) setSchedules(dbSchedules);
+      if (dbReviews) setReviews(dbReviews);
     };
 
     const triggerSync = () => {
@@ -577,6 +579,7 @@ export function AuthProvider({ children }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'released_jobs' }, triggerSync)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'schedules' }, triggerSync)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, triggerSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reviews' }, triggerSync)
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') triggerSync();
       });

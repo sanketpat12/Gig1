@@ -56,7 +56,7 @@ const DEFAULT_USER_IDS = new Set(DEFAULT_USERS.map((user) => user.id));
 const DEMO_USER_STORAGE_KEY = 'gig_demo_user';
 const AUTH_BOOTSTRAP_TIMEOUT_MS = 4000;
 const AUTH_REQUEST_TIMEOUT_MS = 15000;
-const REMOTE_SYNC_INTERVAL_MS = 1000;
+
 const JOB_MUTATION_GRACE_MS = 8000;
 
 const DEFAULT_REVIEWS = [
@@ -569,7 +569,6 @@ export function AuthProvider({ children }) {
 
     triggerSync();
 
-    const intervalId = window.setInterval(triggerSync, REMOTE_SYNC_INTERVAL_MS);
     window.addEventListener('focus', triggerSync);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     const realtimeChannel = supabase
@@ -584,7 +583,6 @@ export function AuthProvider({ children }) {
 
     return () => {
       cancelled = true;
-      window.clearInterval(intervalId);
       window.removeEventListener('focus', triggerSync);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       void supabase.removeChannel(realtimeChannel);

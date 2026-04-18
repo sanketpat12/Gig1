@@ -13,8 +13,8 @@ export default function StarRating({ value = 0, onChange, readonly = false, size
           size={size}
           className={`star ${star <= display ? 'star-filled' : 'star-empty'}`}
           style={{ cursor: readonly ? 'default' : 'pointer', transition: 'transform 0.15s, color 0.15s' }}
-          fill={star <= display ? '#ffd200' : 'transparent'}
-          stroke={star <= display ? '#ffd200' : 'rgba(255,255,255,0.25)'}
+          fill={star <= display ? '#f59e0b' : 'transparent'}
+          stroke={star <= display ? '#f59e0b' : 'var(--border, #cbd5e1)'}
           onMouseEnter={() => !readonly && setHovered(star)}
           onMouseLeave={() => !readonly && setHovered(0)}
           onClick={() => !readonly && onChange && onChange(star)}

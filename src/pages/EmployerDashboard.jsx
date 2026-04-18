@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import WorkerCard from '../components/WorkerCard';
 import ReviewModal from '../components/ReviewModal';
-import { Search, MapPin, Briefcase, SlidersHorizontal, X, PlusCircle, Bell, CheckCircle, Users, ShieldCheck, Hash, Calendar, CalendarCheck, CalendarX, CalendarClock, Edit3, Trash2, Clock3, IndianRupee } from 'lucide-react';
+import { Search, MapPin, Briefcase, SlidersHorizontal, X, PlusCircle, Bell, CheckCircle, Users, ShieldCheck, Hash, Calendar, CalendarCheck, CalendarX, CalendarClock, Edit3, Trash2, Clock3, IndianRupee, Star } from 'lucide-react';
 import './EmployerDashboard.css';
 
 export default function EmployerDashboard() {
@@ -692,6 +692,13 @@ export default function EmployerDashboard() {
                           <p style={{ fontSize:'0.73rem', color:'var(--text-muted)' }}>Job completed</p>
                         </div>
                         <span className="badge badge-success">✅ Done</span>
+                        <button 
+                          className="btn btn-primary btn-sm" 
+                          style={{ marginLeft:'auto', padding:'4px 10px', fontSize:'0.75rem', background: '#f59e0b', color: '#fff', border: 'none', boxShadow: '0 2px 4px rgba(245,158,11,0.2)' }}
+                          onClick={() => setReviewWorker({ id: j.workerId, name: j.workerName })}
+                        >
+                          <Star size={13} style={{ marginRight:'4px', verticalAlign:'middle' }}/> Leave Review
+                        </button>
                         <button 
                           className="btn-dismiss" 
                           style={{ marginLeft:'12px', color:'var(--text-muted)' }}

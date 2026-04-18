@@ -41,10 +41,15 @@ export default function EmployerDashboard() {
   /* Hired worker profile modal - stores { worker, job } */
   const [selectedHiredWorker, setSelectedHiredWorker] = useState(null);
   
+<<<<<<< HEAD
   /* Schedule modal */
   const [scheduleWorker, setScheduleWorker] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
+=======
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  
+>>>>>>> 5fb96a6 (Q2)
   const [toast, setToast] = useState(null);
 
   // Auto-refresh workers from DB when employer opens the dashboard
@@ -107,6 +112,7 @@ export default function EmployerDashboard() {
           </span>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems:'center' }}>
+          {/* Refresh Button */}
           <button
             className={`btn btn-secondary btn-sm ${refreshing ? 'btn-disabled' : ''}`}
             onClick={async () => { setRefreshing(true); await refreshWorkers(); setRefreshing(false); showToast('Worker list refreshed!'); }}
@@ -115,6 +121,28 @@ export default function EmployerDashboard() {
           >
             {refreshing ? '⟳ Refreshing…' : '⟳ Refresh'}
           </button>
+
+          {/* Expandable Search */}
+          {isSearchExpanded ? (
+            <div style={{ display:'flex', alignItems:'center', background:'var(--bg-card)', border:'1px solid var(--primary)', borderRadius:'999px', padding:'2px 6px 2px 14px', width:'220px', transition:'all 0.3s ease', boxShadow:'0 0 0 2px rgba(41,98,255,0.1)' }}>
+              <Search size={14} style={{ color:'var(--primary)' }}/>
+              <input
+                type="text"
+                autoFocus
+                placeholder="Search skills..."
+                value={skill}
+                onChange={e => setSkill(e.target.value)}
+                style={{ border:'none', background:'transparent', outline:'none', fontSize:'0.85rem', padding:'6px 8px', flex:1, color:'var(--text-primary)' }}
+              />
+              <button style={{ background:'none', border:'none', cursor:'pointer', display:'flex', padding:'4px', alignItems:'center' }} onClick={() => { setIsSearchExpanded(false); setSkill(''); }}>
+                <X size={14} style={{ color:'var(--text-muted)' }}/>
+              </button>
+            </div>
+          ) : (
+            <button className="btn btn-secondary btn-sm" style={{ padding:'0 12px', borderRadius:'999px' }} onClick={() => setIsSearchExpanded(true)}>
+              <Search size={15} style={{ color:'var(--text-secondary)' }}/>
+            </button>
+          )}
           <button
             className="btn btn-primary btn-sm"
             onClick={() => setShowReleaseModal(true)}
@@ -261,6 +289,8 @@ export default function EmployerDashboard() {
               </div>
             </div>
           )}
+
+
 
           {/* Filters Panel */}
           {showFilters && (

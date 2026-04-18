@@ -512,7 +512,7 @@ export default function WorkerDashboard() {
                       <button className="btn btn-success btn-sm" style={{ flex:1 }}
                         onClick={async () => {
                           const code = await acceptJob(j.id);
-                          showToast(`Accepted! Your verification code is: ${code}`);
+                          showToast(`Accepted! Your arrival code is ${code}. Show this to the employer when you reach the location.`);
                         }}>
                         <CheckCircle size={13}/> Accept
                       </button>

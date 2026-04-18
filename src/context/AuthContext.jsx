@@ -202,6 +202,14 @@ const getProfilePersistenceErrorMessage = (error, fallbackMessage) => {
   return error.message || fallbackMessage;
 };
 
+const extractVerificationCode = (status) =>
+  typeof status === 'string' && status.startsWith('accepted_')
+    ? status.slice('accepted_'.length)
+    : null;
+
+const generateVerificationCode = () =>
+  String(Math.floor(1000 + Math.random() * 9000));
+
 // Helper: keep the payload aligned with the columns the app actively depends on.
 const buildDbPayload = (userData) => {
   const payload = {
@@ -802,9 +810,7 @@ export function AuthProvider({ children }) {
 
   // Worker accepts a hire request → generates a consistent 4-digit code based on jobId
   const acceptJob = async (jobId) => {
-    // Generate deterministic code based on numeric part of jobId so employer and worker ALWAYS calculate the same code
-    const numericPart = parseInt(jobId.replace(/\D/g, '') || '12345', 10);
-    const code = String((numericPart * 37) % 9000 + 1000); // 4 digit code
+    const code = generateVerificationCode();
     const statusWithCode = `accepted_${code}`;
     
     // Try to update Supabase. If this fails (e.g. testing with demo users), local state handles it.
@@ -819,42 +825,43 @@ export function AuthProvider({ children }) {
 
   // Employer enters the code worker tells them → marks attendance
   const verifyAttendanceCode = async (jobId, enteredCode) => {
+    const normalizedCode = String(enteredCode || '').replace(/\D/g, '');
     let correctCode = null;
+
+    if (normalizedCode.length !== 4) {
+      return { success: false, message: 'Enter the 4-digit code shared by the worker.' };
+    }
     
     // 1. Try reading live status from Supabase
     try {
       const { data, error } = await supabase.from('jobs').select('status').eq('id', jobId).single();
-      if (!error && data && data.status && data.status.startsWith('accepted_')) {
-        correctCode = data.status.split('_')[1];
+      if (!error && data?.status) {
+        correctCode = extractVerificationCode(data.status);
       }
     } catch (e) { console.warn('Supabase error reading code', e); }
     
     // 2. Fallback to local state
     if (!correctCode) {
       const job = jobs.find(j => j.id === jobId);
-      if (job?.status?.startsWith('accepted_')) correctCode = job.status.split('_')[1];
+      if (job?.status?.startsWith('accepted_')) correctCode = extractVerificationCode(job.status);
       else if (job?.verifyCode) correctCode = job.verifyCode;
     }
 
-    // 3. ULTIMATE FALLBACK: Calculate the deterministic code directly
     if (!correctCode) {
-       const numericPart = parseInt(jobId.replace(/\D/g, '') || '12345', 10);
-       correctCode = String((numericPart * 37) % 9000 + 1000);
+      return {
+        success: false,
+        message: 'Verification code is not ready yet. Ask the worker to accept the request first.',
+      };
     }
     
-    // DEV BYPASS: Allow '0000' to succeed immediately for testing purposes
-    if (enteredCode === '0000') {
-      correctCode = '0000';
-    }
-    
-    if (correctCode === enteredCode) {
+    if (correctCode === normalizedCode) {
       try {
         await supabase.from('jobs').update({ status: 'verified' }).eq('id', jobId);
       } catch (e) { console.warn('Supabase error on verifyAttendanceCode', e); }
-      setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: 'verified' } : j));
-      return { success: true, message: 'Attendance verified! Code matched.' };
+      setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: 'verified', verifiedAt: new Date().toISOString() } : j));
+      return { success: true, message: 'Worker arrival confirmed. Attendance marked successfully.' };
     }
-    return { success: false, message: `Incorrect code. (Expected: ${correctCode}). Please enter the correct code shown on the worker's screen.` };
+    return { success: false, message: 'Incorrect code. Please enter the same 4-digit code shown on the worker screen.' };
   };
 
   const getCities = () => [...new Set(users.filter(u => u.role === 'worker' && u.city).map(u => u.city))];

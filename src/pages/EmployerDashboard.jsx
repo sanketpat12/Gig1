@@ -38,15 +38,11 @@ export default function EmployerDashboard() {
   /* Hired worker profile modal - stores { worker, job } */
   const [selectedHiredWorker, setSelectedHiredWorker] = useState(null);
   
-<<<<<<< HEAD
   /* Schedule modal */
   const [scheduleWorker, setScheduleWorker] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-
-=======
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
-  
->>>>>>> 5fb96a6 (Q2)
+
   const [toast, setToast] = useState(null);
 
   // Auto-refresh workers from DB when employer opens the dashboard
@@ -561,10 +557,10 @@ export default function EmployerDashboard() {
               {acceptedHiredJobs.length > 0 && (
                 <div className="glass-card" style={{ borderLeft:'4px solid #7c3aed' }}>
                   <h3 style={{ fontWeight:700, fontSize:'0.95rem', marginBottom:'14px', display:'flex', alignItems:'center', gap:'8px', color:'#7c3aed' }}>
-                    <ShieldCheck size={16}/> Ready for Attendance Verification ({acceptedHiredJobs.length})
+                    <ShieldCheck size={16}/> Confirm Worker Arrival ({acceptedHiredJobs.length})
                   </h3>
                   <p style={{ fontSize:'0.82rem', color:'var(--text-muted)', marginBottom:'16px' }}>
-                    Ask the worker for their 4-digit code and enter it below to verify attendance.
+                    Ask the worker for their 4-digit arrival code and enter it below to confirm they reached the location.
                   </p>
                   <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
                     {acceptedHiredJobs.map(j => {
@@ -640,7 +636,7 @@ export default function EmployerDashboard() {
               {verifiedHiredJobs.length > 0 && (
                 <div className="glass-card" style={{ borderLeft:'4px solid var(--success)' }}>
                   <h3 style={{ fontWeight:700, fontSize:'0.95rem', marginBottom:'14px', display:'flex', alignItems:'center', gap:'8px', color:'var(--success)' }}>
-                    <CheckCircle size={16}/> Attendance Verified ({verifiedHiredJobs.length})
+                    <CheckCircle size={16}/> Arrival Confirmed ({verifiedHiredJobs.length})
                   </h3>
                   <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
                     {verifiedHiredJobs.map(j => {

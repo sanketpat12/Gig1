@@ -281,8 +281,12 @@ body::before {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.7);
-  backdrop-filter: blur(6px);
+  background:
+    radial-gradient(circle at top left, rgba(41, 98, 255, 0.14), transparent 38%),
+    radial-gradient(circle at bottom right, rgba(18, 184, 134, 0.1), transparent 34%),
+    linear-gradient(180deg, rgba(244, 247, 255, 0.68), rgba(229, 236, 247, 0.76));
+  backdrop-filter: blur(14px) saturate(1.08);
+  -webkit-backdrop-filter: blur(14px) saturate(1.08);
   z-index: 1000;
   display: flex;
   align-items: center;
@@ -301,11 +305,96 @@ body::before {
   animation: fadeInUp 0.3s ease;
 }
 
+.modal-content {
+  position: relative;
+  width: min(100%, 560px);
+  max-height: min(88vh, 900px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: var(--radius-lg);
+  animation: fadeInUp 0.3s ease;
+}
+
+.modal-content.glass-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 255, 0.96));
+  border: 1px solid rgba(255, 255, 255, 0.88);
+  padding: clamp(22px, 3vw, 30px);
+  box-shadow:
+    0 26px 80px rgba(34, 60, 120, 0.14),
+    0 8px 24px rgba(41, 98, 255, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.modal-header h1,
+.modal-header h2,
+.modal-header h3 {
+  margin: 0;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.04);
+  color: var(--text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: var(--transition);
+}
+
+.btn-icon:hover {
+  background: rgba(41, 98, 255, 0.1);
+  color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.btn-icon:focus-visible {
+  outline: 2px solid rgba(41, 98, 255, 0.35);
+  outline-offset: 2px;
+}
+
+.tag-primary {
+  background: rgba(41, 98, 255, 0.12);
+  border-color: rgba(41, 98, 255, 0.18);
+  color: var(--primary);
+}
+
 /* Grid helpers */
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
 @media (max-width: 768px) {
   .grid-2, .grid-3 { grid-template-columns: 1fr; }
+
+  .modal-overlay {
+    padding: 12px;
+    align-items: flex-end;
+  }
+
+  .modal-box,
+  .modal-content {
+    width: 100%;
+    max-height: calc(100vh - 24px);
+  }
+
+  .modal-content.glass-card,
+  .modal-box {
+    border-radius: 24px;
+    padding: 20px;
+  }
 }
 
 /* Toasts */

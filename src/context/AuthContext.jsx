@@ -471,12 +471,22 @@ export function AuthProvider({ children }) {
     const intervalId = window.setInterval(triggerSync, REMOTE_SYNC_INTERVAL_MS);
     window.addEventListener('focus', triggerSync);
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    const realtimeChannel = supabase
+      .channel(`gignav-live-sync-${currentUser.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, triggerSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'released_jobs' }, triggerSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'schedules' }, triggerSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, triggerSync)
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') triggerSync();
+      });
 
     return () => {
       cancelled = true;
       window.clearInterval(intervalId);
       window.removeEventListener('focus', triggerSync);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      void supabase.removeChannel(realtimeChannel);
     };
   }, [currentUser?.id]);
 
